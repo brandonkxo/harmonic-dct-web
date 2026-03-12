@@ -1,0 +1,212 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 18 18 18;
+  --foreground: 245 245 245;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: 18 18 18;
+    --foreground: 245 245 245;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  color: rgb(var(--foreground));
+  background: rgb(var(--background));
+}
+
+/* Dark mode is default */
+.dark {
+  --background: 9 9 11;
+  --foreground: 250 250 250;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Parameter input styling */
+.param-input {
+  @apply bg-surface-800 border border-surface-600 rounded px-2 py-1;
+  @apply text-sm font-mono text-right;
+  @apply focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500;
+  @apply transition-colors;
+}
+
+.param-input::-webkit-inner-spin-button,
+.param-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.param-input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Button styling */
+.btn {
+  @apply px-4 py-2 rounded font-medium;
+  @apply transition-colors duration-150;
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-900;
+}
+
+.btn-primary {
+  @apply bg-primary-600 text-white hover:bg-primary-700;
+  @apply focus:ring-primary-500;
+}
+
+.btn-secondary {
+  @apply bg-surface-700 text-surface-100 hover:bg-surface-600;
+  @apply focus:ring-surface-500;
+}
+
+.btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700;
+  @apply focus:ring-red-500;
+}
+
+/* Panel styling */
+.panel {
+  @apply bg-surface-900 border border-surface-700 rounded-lg;
+}
+
+.panel-header {
+  @apply px-4 py-3 border-b border-surface-700;
+  @apply font-medium text-surface-100;
+}
+
+.panel-body {
+  @apply p-4;
+}
+
+/* Tab styling */
+.tab-button {
+  @apply px-4 py-2 text-sm font-medium;
+  @apply text-surface-400 hover:text-surface-100;
+  @apply border-b-2 border-transparent;
+  @apply transition-colors;
+}
+
+.tab-button.active {
+  @apply text-primary-400 border-primary-400;
+}
+
+/* Collapsible group styling */
+.collapsible-header {
+  @apply flex items-center justify-between w-full px-3 py-2;
+  @apply bg-surface-800 hover:bg-surface-700;
+  @apply rounded cursor-pointer;
+  @apply text-sm font-medium text-surface-200;
+  @apply transition-colors;
+}
+
+.collapsible-content {
+  @apply px-3 py-2 space-y-2;
+}
+
+/* Output value styling */
+.output-row {
+  @apply flex justify-between items-center py-1;
+  @apply text-sm;
+}
+
+.output-label {
+  @apply text-surface-400;
+}
+
+.output-value {
+  @apply font-mono text-surface-100;
+}
+
+/* Tooltip styling */
+.tooltip {
+  @apply absolute z-50 px-2 py-1 text-xs;
+  @apply bg-surface-700 text-surface-100;
+  @apply rounded shadow-lg;
+  @apply pointer-events-none;
+}
+
+/* Grid background */
+.grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(128, 128, 128, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(128, 128, 128, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Plot container */
+.plot-container {
+  @apply w-full h-full min-h-[400px];
+  @apply bg-surface-950 rounded-lg;
+  @apply border border-surface-700;
+}
+
+/* Status indicator */
+.status-indicator {
+  @apply inline-flex items-center px-2 py-1 rounded text-xs font-medium;
+}
+
+.status-indicator.success {
+  @apply bg-green-900/50 text-green-400;
+}
+
+.status-indicator.error {
+  @apply bg-red-900/50 text-red-400;
+}
+
+.status-indicator.computing {
+  @apply bg-blue-900/50 text-blue-400;
+}
+
+/* Animation for computing state */
+@keyframes pulse-opacity {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.computing-pulse {
+  animation: pulse-opacity 1.5s ease-in-out infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .param-input {
+    @apply text-xs;
+  }
+}
