@@ -170,9 +170,9 @@ export function TabLongitudinalModification() {
   }, [sections, l0, nSections]);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-full">
+    <div className="flex flex-col lg:flex-row gap-2 h-full">
       {/* Left Panel */}
-      <div className="w-full lg:w-80 flex-shrink-0 space-y-4 overflow-y-auto">
+      <div className="w-full lg:w-72 flex-shrink-0 space-y-2 overflow-y-auto">
         <div className="panel">
           <div className="panel-header">Parameters</div>
           <div className="panel-body">
@@ -185,9 +185,9 @@ export function TabLongitudinalModification() {
         </div>
 
         <Collapsible title="Longitudinal Modification" defaultOpen>
-          <div className="space-y-3">
+          <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <label className="flex-1 text-sm text-surface-400">Total Length l₀</label>
+              <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Total Length l0</label>
               <Input
                 type="number"
                 value={l0}
@@ -199,7 +199,7 @@ export function TabLongitudinalModification() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="flex-1 text-sm text-surface-400">Engagement lᵢ</label>
+              <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Engagement li</label>
               <Input
                 type="number"
                 value={li}
@@ -212,7 +212,7 @@ export function TabLongitudinalModification() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="flex-1 text-sm text-surface-400">Sections</label>
+              <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Sections</label>
               <Input
                 type="number"
                 value={nSections}
@@ -241,9 +241,9 @@ export function TabLongitudinalModification() {
       </div>
 
       {/* Right Panel - Plots */}
-      <div className="flex-1 flex flex-col gap-4 min-h-[600px] lg:min-h-0">
+      <div className="flex-1 flex flex-col gap-2 min-h-[500px] lg:min-h-0">
         {/* Top: Cross-section view */}
-        <div className="flex-1 min-h-[300px]">
+        <div className="flex-1 min-h-[250px]">
           <PlotView
             traces={traces}
             title="Cross-Sections at Different Axial Positions"
@@ -254,7 +254,7 @@ export function TabLongitudinalModification() {
         </div>
 
         {/* Bottom: Side view showing modification */}
-        <div className="h-48">
+        <div className="h-40">
           <PlotView
             traces={sideViewTraces}
             title="Longitudinal Modification Profile"

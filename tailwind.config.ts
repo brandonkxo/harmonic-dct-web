@@ -6,58 +6,66 @@ const config: Config = {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
-  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Technical/engineering color palette matching wavefnx.com aesthetic
+        // Orange accent palette matching wavefnx.com
         primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
+          50: '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          300: '#fdba74',
+          400: '#fb923c',
+          500: '#f97316',
+          600: '#ea580c',
+          700: '#c2410c',
+          800: '#9a3412',
+          900: '#7c2d12',
         },
+        // Light theme surface colors
         surface: {
-          50: '#fafafa',
-          100: '#f4f4f5',
-          200: '#e4e4e7',
-          300: '#d4d4d8',
-          400: '#a1a1aa',
-          500: '#71717a',
-          600: '#52525b',
-          700: '#3f3f46',
-          800: '#27272a',
-          900: '#18181b',
-          950: '#09090b',
+          50: '#ffffff',
+          100: '#fafafa',
+          200: '#f0f0f0',
+          300: '#e0e0e0',
+          400: '#c8c8c8',
+          500: '#a0a0a0',
+          600: '#787878',
+          700: '#505050',
+          800: '#383838',
+          900: '#282828',
+          950: '#181818',
         },
         // Segment colors for gear profiles
         segment: {
-          ab: '#ef4444',      // Red - convex arc AB
-          bc: '#3b82f6',      // Blue - tangent line BC
-          cd: '#22c55e',      // Green - concave arc CD
-          conjugate: '#f59e0b', // Amber - conjugate profile
+          ab: '#dc2626',      // Red - convex arc AB
+          bc: '#2563eb',      // Blue - tangent line BC
+          cd: '#16a34a',      // Green - concave arc CD
+          conjugate: '#ea580c', // Orange - conjugate profile
         },
         // Reference line colors
         reference: {
-          addendum: '#f472b6',  // Pink
-          pitch: '#a78bfa',     // Violet
-          dedendum: '#fb923c',  // Orange
+          addendum: '#db2777',  // Pink
+          pitch: '#7c3aed',     // Violet
+          dedendum: '#ea580c',  // Orange
         }
       },
       fontFamily: {
-        mono: ['JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', 'monospace'],
+        mono: ['JetBrains Mono', 'Consolas', 'Monaco', 'monospace'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+      },
+      fontSize: {
+        'xxs': ['0.625rem', { lineHeight: '0.875rem' }],
       },
       backgroundImage: {
-        'grid-pattern': 'linear-gradient(to right, rgba(128,128,128,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(128,128,128,0.1) 1px, transparent 1px)',
+        'grid-pattern': 'linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)',
       },
       backgroundSize: {
         'grid': '20px 20px',
+      },
+      spacing: {
+        '0.5': '0.125rem',
+        '1.5': '0.375rem',
       },
     },
   },

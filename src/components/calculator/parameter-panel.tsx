@@ -52,14 +52,14 @@ export function ParameterPanel({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Parameter Groups */}
       {Object.entries(PARAM_GROUPS).map(([groupName, paramKeys]) => (
         <Collapsible key={groupName} title={groupName} defaultOpen={groupName === 'Basic Geometry'}>
-          <div className="space-y-3">
+          <div className="space-y-1">
             {paramKeys.map((key) => (
               <div key={key} className="flex items-center gap-2">
-                <label className="flex-1 text-sm text-surface-400 truncate" title={PARAM_TOOLTIPS[key]}>
+                <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide truncate" title={PARAM_TOOLTIPS[key]}>
                   {PARAM_LABELS[key]}
                 </label>
                 <Input
@@ -80,7 +80,7 @@ export function ParameterPanel({
       {includeSmooth && (
         <Collapsible title="Smoothing" defaultOpen={false}>
           <div className="flex items-center gap-2">
-            <label className="flex-1 text-sm text-surface-400">Smooth Factor</label>
+            <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Smooth Factor</label>
             <Input
               type="number"
               value={smooth}
@@ -97,9 +97,9 @@ export function ParameterPanel({
       {/* Fillets */}
       {includeFillets && (
         <Collapsible title="Fillet Radii" defaultOpen={false}>
-          <div className="space-y-3">
+          <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <label className="flex-1 text-sm text-surface-400">Addendum Fillet</label>
+              <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Addendum Fillet</label>
               <Input
                 type="number"
                 value={filletAdd}
@@ -111,7 +111,7 @@ export function ParameterPanel({
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="flex-1 text-sm text-surface-400">Dedendum Fillet</label>
+              <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Dedendum Fillet</label>
               <Input
                 type="number"
                 value={filletDed}

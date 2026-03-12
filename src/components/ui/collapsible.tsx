@@ -20,7 +20,7 @@ export function Collapsible({
   const [isOpen, setIsOpen] = React.useState(defaultOpen);
 
   return (
-    <div className={cn('border border-surface-700 rounded-lg overflow-hidden', className)}>
+    <div className={cn('rounded overflow-hidden', className)}>
       <button
         type="button"
         className="collapsible-header"
@@ -30,7 +30,7 @@ export function Collapsible({
         <span>{title}</span>
         <ChevronDown
           className={cn(
-            'h-4 w-4 text-surface-400 transition-transform',
+            'h-3 w-3 text-white/80 transition-transform',
             isOpen && 'transform rotate-180'
           )}
         />

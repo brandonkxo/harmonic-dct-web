@@ -55,7 +55,7 @@ export function TabsList({ children, className }: TabsListProps) {
   return (
     <div
       className={cn(
-        'flex flex-wrap gap-1 border-b border-surface-700 bg-surface-900/50',
+        'flex flex-wrap gap-0.5 border-b border-surface-400 bg-surface-200 px-2 py-1',
         className
       )}
     >

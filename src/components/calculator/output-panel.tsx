@@ -25,10 +25,10 @@ export function OutputPanel({ category, values, className }: OutputPanelProps) {
     <div className={cn('space-y-4', className)}>
       {categories.map((cat) => (
         <div key={cat.label} className="space-y-1">
-          <h4 className="text-xs font-medium text-surface-500 uppercase tracking-wider">
+          <h4 className="text-xs font-medium text-surface-600 uppercase tracking-wider">
             {cat.label}
           </h4>
-          <div className="bg-surface-800/50 rounded p-2 space-y-1">
+          <div className="bg-white rounded p-1.5 space-y-0.5 border border-surface-400">
             {cat.values.map((item) => {
               const value = values[item.key];
               const displayValue =
@@ -60,16 +60,16 @@ interface StatusMessageProps {
 
 export function StatusMessage({ message, type = 'info', className }: StatusMessageProps) {
   const typeStyles = {
-    info: 'text-surface-400',
-    success: 'text-green-400',
-    error: 'text-red-400',
-    computing: 'text-blue-400 computing-pulse',
+    info: 'text-surface-600',
+    success: 'text-green-600',
+    error: 'text-red-600',
+    computing: 'text-blue-600 computing-pulse',
   };
 
   return (
-    <div className={cn('text-sm py-2', typeStyles[type], className)}>
+    <div className={cn('text-xs py-1', typeStyles[type], className)}>
       {type === 'computing' && (
-        <span className="inline-block w-4 h-4 mr-2 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+        <span className="inline-block w-3 h-3 mr-1 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
       )}
       {message}
     </div>
@@ -83,7 +83,7 @@ interface ProgressBarProps {
 
 export function ProgressBar({ progress, className }: ProgressBarProps) {
   return (
-    <div className={cn('w-full h-2 bg-surface-800 rounded overflow-hidden', className)}>
+    <div className={cn('w-full h-1.5 bg-surface-300 rounded overflow-hidden', className)}>
       <div
         className="h-full bg-primary-500 transition-all duration-200"
         style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}

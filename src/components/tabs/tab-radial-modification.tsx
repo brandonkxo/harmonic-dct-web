@@ -112,9 +112,9 @@ export function TabRadialModification() {
   }, [originalPoints, modifiedPoints, showOriginal, showModified]);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-full">
+    <div className="flex flex-col lg:flex-row gap-2 h-full">
       {/* Left Panel */}
-      <div className="w-full lg:w-80 flex-shrink-0 space-y-4 overflow-y-auto">
+      <div className="w-full lg:w-72 flex-shrink-0 space-y-2 overflow-y-auto">
         <div className="panel">
           <div className="panel-header">Parameters</div>
           <div className="panel-body">
@@ -128,9 +128,9 @@ export function TabRadialModification() {
 
         <div className="panel">
           <div className="panel-header">Radial Modification</div>
-          <div className="panel-body space-y-3">
+          <div className="panel-body space-y-1">
             <div className="flex items-center gap-2">
-              <label className="flex-1 text-sm text-surface-400">d_max (mm)</label>
+              <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">d_max (mm)</label>
               <Input
                 type="number"
                 value={dmax}
@@ -141,14 +141,14 @@ export function TabRadialModification() {
                 className="w-24"
               />
             </div>
-            <p className="text-xs text-surface-500">
+            <p className="text-xs text-surface-500 mt-1">
               Maximum interference distance to shift tooth profile inward.
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-1.5 text-xs">
             <input
               type="checkbox"
               checked={showOriginal}
@@ -157,7 +157,7 @@ export function TabRadialModification() {
             />
             Original
           </label>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-1.5 text-xs">
             <input
               type="checkbox"
               checked={showModified}
@@ -183,7 +183,7 @@ export function TabRadialModification() {
       </div>
 
       {/* Right Panel - Plot */}
-      <div className="flex-1 min-h-[400px] lg:min-h-0">
+      <div className="flex-1 min-h-[300px] lg:min-h-0">
         <PlotView
           traces={traces}
           title="Radial Modification Comparison"

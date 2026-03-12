@@ -13,14 +13,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <link
-          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="bg-surface-950 text-surface-100 antialiased">
+      <body className="bg-surface-300 text-surface-900 antialiased text-sm">
         {children}
       </body>
     </html>

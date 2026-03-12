@@ -10,8 +10,8 @@ import type { PointTuple } from '@/types';
 const Plot = dynamic(() => import('react-plotly.js'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-surface-950 rounded-lg border border-surface-700">
-      <span className="text-surface-500">Loading plot...</span>
+    <div className="w-full h-full min-h-[300px] flex items-center justify-center bg-white rounded border border-surface-400">
+      <span className="text-surface-500 text-xs uppercase tracking-wide">Loading plot...</span>
     </div>
   ),
 });
@@ -58,7 +58,7 @@ export function PlotView({
     },
     marker: {
       color: trace.color || PLOT_COLORS.AB,
-      size: 6,
+      size: 5,
     },
     showlegend: trace.showlegend !== false,
   }));
@@ -67,34 +67,34 @@ export function PlotView({
     title: title
       ? {
           text: title,
-          font: { color: '#a1a1aa', size: 14 },
+          font: { color: '#505050', size: 12 },
         }
       : undefined,
-    paper_bgcolor: 'transparent',
-    plot_bgcolor: '#09090b',
-    font: { color: '#a1a1aa', family: 'JetBrains Mono, monospace' },
+    paper_bgcolor: '#ffffff',
+    plot_bgcolor: '#fafafa',
+    font: { color: '#505050', family: 'JetBrains Mono, monospace', size: 10 },
     xaxis: {
-      title: xAxisLabel,
-      gridcolor: '#27272a',
-      zerolinecolor: '#3f3f46',
+      title: { text: xAxisLabel, font: { size: 10 } },
+      gridcolor: '#e0e0e0',
+      zerolinecolor: '#c8c8c8',
       scaleanchor: equalAspect ? 'y' : undefined,
       scaleratio: equalAspect ? 1 : undefined,
     },
     yaxis: {
-      title: yAxisLabel,
-      gridcolor: '#27272a',
-      zerolinecolor: '#3f3f46',
+      title: { text: yAxisLabel, font: { size: 10 } },
+      gridcolor: '#e0e0e0',
+      zerolinecolor: '#c8c8c8',
     },
     legend: {
       x: 1,
       y: 1,
       xanchor: 'right',
-      bgcolor: 'rgba(39, 39, 42, 0.8)',
-      bordercolor: '#3f3f46',
+      bgcolor: 'rgba(255, 255, 255, 0.9)',
+      bordercolor: '#c8c8c8',
       borderwidth: 1,
-      font: { size: 10 },
+      font: { size: 9 },
     },
-    margin: { l: 60, r: 20, t: title ? 40 : 20, b: 50 },
+    margin: { l: 50, r: 15, t: title ? 35 : 15, b: 40 },
     hovermode: 'closest',
   };
 

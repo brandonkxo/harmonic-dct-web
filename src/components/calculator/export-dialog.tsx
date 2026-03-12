@@ -45,13 +45,13 @@ export function ExportDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-surface-900 border border-surface-700 rounded-lg w-full max-w-md p-6 shadow-xl">
-        <h2 className="text-lg font-medium mb-4">Export Curve</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-surface-100 border border-surface-400 rounded w-full max-w-sm p-4 shadow-xl">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-surface-700 mb-3">Export Curve</h2>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
-            <label className="block text-sm text-surface-400 mb-1">Filename</label>
+            <label className="block text-xs text-surface-600 uppercase tracking-wide mb-1">Filename</label>
             <Input
               value={filename}
               onChange={(e) => setFilename(e.target.value)}
@@ -60,9 +60,9 @@ export function ExportDialog({
           </div>
 
           <div>
-            <label className="block text-sm text-surface-400 mb-2">Format</label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
+            <label className="block text-xs text-surface-600 uppercase tracking-wide mb-1">Format</label>
+            <div className="flex gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer text-xs">
                 <input
                   type="radio"
                   name="format"
@@ -70,9 +70,9 @@ export function ExportDialog({
                   onChange={() => setFormat('sldcrv')}
                   className="text-primary-500"
                 />
-                <span className="text-sm">SLDCRV (SolidWorks)</span>
+                <span>SLDCRV (SolidWorks)</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-1.5 cursor-pointer text-xs">
                 <input
                   type="radio"
                   name="format"
@@ -80,29 +80,29 @@ export function ExportDialog({
                   onChange={() => setFormat('dxf')}
                   className="text-primary-500"
                 />
-                <span className="text-sm">DXF (AutoCAD)</span>
+                <span>DXF (AutoCAD)</span>
               </label>
             </div>
           </div>
 
           {format === 'dxf' && (
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-1.5 cursor-pointer text-xs">
               <input
                 type="checkbox"
                 checked={closed}
                 onChange={(e) => setClosed(e.target.checked)}
                 className="text-primary-500"
               />
-              <span className="text-sm">Closed polyline</span>
+              <span>Closed polyline</span>
             </label>
           )}
 
-          <div className="text-sm text-surface-500">
+          <div className="text-xs text-surface-500">
             {points ? `${points.length} points will be exported` : 'No points to export'}
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-6">
+        <div className="flex justify-end gap-1.5 mt-4">
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
@@ -154,16 +154,16 @@ export function ConfigDialog({ mode, isOpen, onClose }: ConfigDialogProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-surface-900 border border-surface-700 rounded-lg w-full max-w-md p-6 shadow-xl">
-        <h2 className="text-lg font-medium mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-surface-100 border border-surface-400 rounded w-full max-w-sm p-4 shadow-xl">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-surface-700 mb-3">
           {mode === 'save' ? 'Save Configuration' : 'Load Configuration'}
         </h2>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {mode === 'save' ? (
             <div>
-              <label className="block text-sm text-surface-400 mb-1">Configuration Name</label>
+              <label className="block text-xs text-surface-600 uppercase tracking-wide mb-1">Configuration Name</label>
               <Input
                 value={configName}
                 onChange={(e) => setConfigName(e.target.value)}
@@ -172,26 +172,26 @@ export function ConfigDialog({ mode, isOpen, onClose }: ConfigDialogProps) {
             </div>
           ) : (
             <div>
-              <label className="block text-sm text-surface-400 mb-2">Select JSON file</label>
+              <label className="block text-xs text-surface-600 uppercase tracking-wide mb-1">Select JSON file</label>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".json"
                 onChange={handleLoadFile}
-                className="block w-full text-sm text-surface-400
-                  file:mr-4 file:py-2 file:px-4
+                className="block w-full text-xs text-surface-600
+                  file:mr-2 file:py-1 file:px-2
                   file:rounded file:border-0
-                  file:text-sm file:font-medium
-                  file:bg-surface-700 file:text-surface-100
-                  hover:file:bg-surface-600"
+                  file:text-xs file:font-medium
+                  file:bg-surface-300 file:text-surface-700
+                  hover:file:bg-surface-400"
               />
             </div>
           )}
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
 
-        <div className="flex justify-end gap-2 mt-6">
+        <div className="flex justify-end gap-1.5 mt-4">
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>

@@ -114,9 +114,9 @@ export function TabFlexsplineTooth() {
   }, [result]);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-full">
+    <div className="flex flex-col lg:flex-row gap-2 h-full">
       {/* Left Panel - Parameters & Outputs */}
-      <div className="w-full lg:w-80 flex-shrink-0 space-y-4 overflow-y-auto">
+      <div className="w-full lg:w-72 flex-shrink-0 space-y-2 overflow-y-auto">
         <div className="panel">
           <div className="panel-header">Parameters</div>
           <div className="panel-body">
@@ -135,7 +135,7 @@ export function TabFlexsplineTooth() {
       </div>
 
       {/* Right Panel - Plot */}
-      <div className="flex-1 min-h-[400px] lg:min-h-0">
+      <div className="flex-1 min-h-[300px] lg:min-h-0">
         <PlotView
           traces={traces}
           title="Flexspline Tooth Profile"

@@ -17,9 +17,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="relative">
         {label && (
-          <div className="flex items-center gap-1 mb-1">
+          <div className="flex items-center gap-1 mb-0.5">
             <label
-              className="text-sm text-surface-400"
+              className="text-xs text-surface-600 uppercase tracking-wide"
               onMouseEnter={() => tooltip && setShowTooltip(true)}
               onMouseLeave={() => setShowTooltip(false)}
             >
@@ -47,12 +47,12 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {suffix && (
-            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-surface-500">
+            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-xs text-surface-500">
               {suffix}
             </span>
           )}
         </div>
-        {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+        {error && <p className="mt-0.5 text-xs text-red-600">{error}</p>}
       </div>
     );
   }
