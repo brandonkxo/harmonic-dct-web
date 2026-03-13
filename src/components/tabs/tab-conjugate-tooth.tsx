@@ -72,8 +72,8 @@ export function TabConjugateTooth() {
   }, [params, smooth, setError, setComputing, setComputeProgress]);
 
   // Build plot traces
-  const traces = React.useMemo(() => {
-    if (!result || result.error) return [];
+  const { traces, xRange } = React.useMemo(() => {
+    if (!result || result.error) return { traces: [], xRange: undefined as [number, number] | undefined };
 
     const plotTraces = [];
     const { ha, hf, m } = params;
@@ -81,6 +81,11 @@ export function TabConjugateTooth() {
     // Reference lines
     const x_min = -m * Math.PI / 2;
     const x_max = m * Math.PI / 2;
+
+    // Centered x range for viewport (symmetric around 0)
+    const x_extent = Math.max(Math.abs(x_min), Math.abs(x_max)) * 1.1;
+    const centeredXRange: [number, number] = [-x_extent, x_extent];
+
     plotTraces.push(createReferenceLine(ha, x_min, x_max, 'Addendum', PLOT_COLORS.addendum));
     plotTraces.push(createReferenceLine(0, x_min, x_max, 'Pitch', PLOT_COLORS.pitch));
     plotTraces.push(createReferenceLine(-hf, x_min, x_max, 'Dedendum', PLOT_COLORS.dedendum));
@@ -102,6 +107,15 @@ export function TabConjugateTooth() {
           mode: 'markers' as const,
           showlegend: false,
         });
+        // Mirror raw points
+        plotTraces.push({
+          x: pts.map((p) => -p[0]),
+          y: pts.map((p) => p[1]),
+          name: '',
+          color: segColors[segKey as keyof typeof segColors] || PLOT_COLORS.conjugate,
+          mode: 'markers' as const,
+          showlegend: false,
+        });
       }
     }
 
@@ -110,9 +124,14 @@ export function TabConjugateTooth() {
       plotTraces.push(
         pointsToTrace(result.smoothed_flank, 'Conjugate (smoothed)', PLOT_COLORS.conjugate, { width: 2 })
       );
+      // Mirror smoothed flank
+      const mirrored: PointTuple[] = result.smoothed_flank.map(([x, y]) => [-x, y]);
+      plotTraces.push(
+        pointsToTrace(mirrored, '', PLOT_COLORS.mirror, { width: 2, showlegend: false })
+      );
     }
 
-    return plotTraces;
+    return { traces: plotTraces, xRange: centeredXRange };
   }, [result, params]);
 
   // Output values
@@ -179,6 +198,7 @@ export function TabConjugateTooth() {
           title="Conjugate Circular Spline Tooth Profile"
           xAxisLabel="X_G (mm)"
           yAxisLabel="Y (mm)"
+          xRange={xRange}
           className="h-full"
         />
       </div>

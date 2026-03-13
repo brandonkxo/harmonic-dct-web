@@ -33,6 +33,8 @@ interface PlotViewProps {
   xAxisLabel?: string;
   yAxisLabel?: string;
   equalAspect?: boolean;
+  xRange?: [number, number];
+  yRange?: [number, number];
   className?: string;
 }
 
@@ -42,6 +44,8 @@ export function PlotView({
   xAxisLabel = 'X (mm)',
   yAxisLabel = 'Y (mm)',
   equalAspect = true,
+  xRange,
+  yRange,
   className,
 }: PlotViewProps) {
   // Convert our trace format to Plotly format
@@ -79,11 +83,13 @@ export function PlotView({
       zerolinecolor: '#b1b9be',
       scaleanchor: equalAspect ? 'y' : undefined,
       scaleratio: equalAspect ? 1 : undefined,
+      range: xRange,
     },
     yaxis: {
       title: { text: yAxisLabel, font: { size: 10 } },
       gridcolor: '#b1b9be',
       zerolinecolor: '#b1b9be',
+      range: yRange,
     },
     legend: {
       x: 1,

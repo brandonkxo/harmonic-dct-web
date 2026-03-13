@@ -42,8 +42,8 @@ export function TabFlexsplineTooth() {
   }, []);
 
   // Build plot traces
-  const traces = React.useMemo(() => {
-    if (!result) return [];
+  const { traces, xRange } = React.useMemo(() => {
+    if (!result) return { traces: [], xRange: undefined as [number, number] | undefined };
 
     const { pts_AB, pts_BC, pts_CD, ds, x1_R, y1_R, x2_R, y2_R } = result;
     const { ha, hf, m } = params;
@@ -53,9 +53,13 @@ export function TabFlexsplineTooth() {
     const y_pitch = ds + hf;
     const y_ded = ds;
 
-    // X range
+    // X range for reference lines
     const x_min = -m * Math.PI / 4;
     const x_max = m * Math.PI / 2 + m * Math.PI / 4;
+
+    // Centered x range for viewport (symmetric around 0)
+    const x_extent = Math.max(Math.abs(x_min), Math.abs(x_max)) * 1.1;
+    const centeredXRange: [number, number] = [-x_extent, x_extent];
 
     const plotTraces = [];
 
@@ -93,7 +97,7 @@ export function TabFlexsplineTooth() {
     plotTraces.push(createMarker(x1_R, y1_R, 'O\u2081', PLOT_COLORS.center));
     plotTraces.push(createMarker(x2_R, y2_R, 'O\u2082', PLOT_COLORS.center));
 
-    return plotTraces;
+    return { traces: plotTraces, xRange: centeredXRange };
   }, [result, params]);
 
   // Output values
@@ -141,6 +145,7 @@ export function TabFlexsplineTooth() {
           title="Flexspline Tooth Profile"
           xAxisLabel="X_R (mm)"
           yAxisLabel="Y_R (mm)"
+          xRange={xRange}
           className="h-full"
         />
       </div>
