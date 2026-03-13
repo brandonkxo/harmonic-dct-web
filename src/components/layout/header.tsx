@@ -17,7 +17,7 @@ export function Header() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="text-sm font-semibold text-white uppercase tracking-wide">
-              Harmonic Drive DCT Calculator
+              Harmonic Drive Calculator
             </h1>
             <span className="text-xs text-primary-100 hidden sm:inline">
               Double-Circular-Arc Common-Tangent Flexspline

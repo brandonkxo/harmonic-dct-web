@@ -89,7 +89,7 @@ export function TabLongitudinalModification() {
     const plotTraces = [];
     const colors = [
       '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4',
-      '#3b82f6', '#8b5cf6', '#ec4899',
+      '#e35000', '#8b5cf6', '#ec4899',
     ];
 
     sections.forEach((section, i) => {
@@ -143,7 +143,7 @@ export function TabLongitudinalModification() {
         x: [section.z, section.z],
         y: [-5, 15],
         name: i === 0 ? 'Sections' : '',
-        color: '#6b7280',
+        color: '#b1b9be',
         mode: 'lines' as const,
         width: 1,
         dash: 'dot',
@@ -190,9 +190,9 @@ export function TabLongitudinalModification() {
               <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Total Length l0</label>
               <Input
                 type="number"
-                value={l0}
+                value={parseFloat(l0.toFixed(3))}
                 onChange={(e) => setL0(parseFloat(e.target.value) || 10)}
-                step={1}
+                step={0.001}
                 min={1}
                 className="w-24"
                 suffix="mm"
@@ -202,9 +202,9 @@ export function TabLongitudinalModification() {
               <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Engagement li</label>
               <Input
                 type="number"
-                value={li}
+                value={parseFloat(li.toFixed(3))}
                 onChange={(e) => setLi(parseFloat(e.target.value) || 5)}
-                step={0.5}
+                step={0.001}
                 min={0}
                 max={l0}
                 className="w-24"

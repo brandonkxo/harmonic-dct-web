@@ -63,13 +63,13 @@ export function StatusMessage({ message, type = 'info', className }: StatusMessa
     info: 'text-surface-600',
     success: 'text-green-600',
     error: 'text-red-600',
-    computing: 'text-blue-600 computing-pulse',
+    computing: 'text-orange-600 computing-pulse',
   };
 
   return (
     <div className={cn('text-xs py-1', typeStyles[type], className)}>
       {type === 'computing' && (
-        <span className="inline-block w-3 h-3 mr-1 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <span className="inline-block w-3 h-3 mr-1 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" />
       )}
       {message}
     </div>

@@ -11,8 +11,8 @@ export function Footer() {
       <div className="flex items-center justify-between text-xs text-surface-700">
         <div className="flex items-center gap-4">
           {isComputing ? (
-            <span className="text-blue-600 flex items-center gap-2">
-              <span className="inline-block w-2 h-2 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <span className="text-orange-600 flex items-center gap-2">
+              <span className="inline-block w-2 h-2 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" />
               Computing... {computeProgress}%
             </span>
           ) : lastError ? (

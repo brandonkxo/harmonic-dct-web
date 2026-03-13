@@ -39,7 +39,7 @@ const config: Config = {
         // Segment colors for gear profiles
         segment: {
           ab: '#dc2626',      // Red - convex arc AB
-          bc: '#2563eb',      // Blue - tangent line BC
+          bc: '#e35000',      // Orange - tangent line BC
           cd: '#16a34a',      // Green - concave arc CD
           conjugate: '#ea580c', // Orange - conjugate profile
         },

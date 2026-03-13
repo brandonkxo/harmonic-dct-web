@@ -94,9 +94,9 @@ export const OUTPUT_CATEGORIES = {
     {
       label: 'Wall Thickness',
       values: [
-        { key: 's', label: 'Ring Wall (s)', unit: 'mm', precision: 4 },
-        { key: 't', label: 'Cup Wall (t)', unit: 'mm', precision: 4 },
-        { key: 'ds', label: 'Neutral Offset (ds)', unit: 'mm', precision: 4 },
+        { key: 's', label: 'Ring Wall (s)', unit: 'mm', precision: 3 },
+        { key: 't', label: 'Cup Wall (t)', unit: 'mm', precision: 3 },
+        { key: 'ds', label: 'Neutral Offset (ds)', unit: 'mm', precision: 3 },
       ],
     },
     {
@@ -109,9 +109,9 @@ export const OUTPUT_CATEGORIES = {
     {
       label: 'Arc Lengths',
       values: [
-        { key: 'l1', label: 'L1 (AB)', unit: 'mm', precision: 4 },
-        { key: 'l2', label: 'L2 (BC)', unit: 'mm', precision: 4 },
-        { key: 'l3', label: 'L3 (CD)', unit: 'mm', precision: 4 },
+        { key: 'l1', label: 'L1 (AB)', unit: 'mm', precision: 3 },
+        { key: 'l2', label: 'L2 (BC)', unit: 'mm', precision: 3 },
+        { key: 'l3', label: 'L3 (CD)', unit: 'mm', precision: 3 },
       ],
     },
     {
@@ -156,10 +156,10 @@ export const OUTPUT_CATEGORIES = {
 // Plot colors matching Python app
 export const PLOT_COLORS = {
   AB: '#ef4444',       // Red - convex arc
-  BC: '#3b82f6',       // Blue - tangent line
+  BC: '#e35000',       // Orange - tangent line
   CD: '#22c55e',       // Green - concave arc
   conjugate: '#f59e0b', // Amber - conjugate profile
-  mirror: '#6b7280',   // Gray - mirrored profile
+  mirror: '#b1b9be',   // Gray - mirrored profile
   addendum: '#f472b6', // Pink - addendum line
   pitch: '#a78bfa',    // Violet - pitch line
   dedendum: '#fb923c', // Orange - dedendum line

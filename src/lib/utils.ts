@@ -16,14 +16,14 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Format a number with specified precision
  */
-export function formatNumber(value: number, precision: number = 4): string {
+export function formatNumber(value: number, precision: number = 3): string {
   return value.toFixed(precision);
 }
 
 /**
  * Format a number with unit
  */
-export function formatWithUnit(value: number, unit: string, precision: number = 4): string {
+export function formatWithUnit(value: number, unit: string, precision: number = 3): string {
   return `${formatNumber(value, precision)}${unit ? ' ' + unit : ''}`;
 }
 

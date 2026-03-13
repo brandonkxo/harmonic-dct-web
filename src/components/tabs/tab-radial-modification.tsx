@@ -79,7 +79,7 @@ export function TabRadialModification() {
     } else {
       setModifiedPoints(modified.chain_xy);
       setStatus({
-        message: `Radial modification applied: d_max = ${dmax.toFixed(4)} mm`,
+        message: `Radial modification applied: d_max = ${dmax.toFixed(3)} mm`,
         type: 'success',
       });
     }
@@ -133,7 +133,7 @@ export function TabRadialModification() {
               <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">d_max (mm)</label>
               <Input
                 type="number"
-                value={dmax}
+                value={parseFloat(dmax.toFixed(3))}
                 onChange={(e) => setDmax(parseFloat(e.target.value) || 0)}
                 step={0.001}
                 min={0}

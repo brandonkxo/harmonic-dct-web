@@ -57,21 +57,25 @@ export function ParameterPanel({
       {Object.entries(PARAM_GROUPS).map(([groupName, paramKeys]) => (
         <Collapsible key={groupName} title={groupName} defaultOpen={groupName === 'Basic Geometry'}>
           <div className="space-y-1">
-            {paramKeys.map((key) => (
-              <div key={key} className="flex items-center gap-2">
-                <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide truncate" title={PARAM_TOOLTIPS[key]}>
-                  {PARAM_LABELS[key]}
-                </label>
-                <Input
-                  type="number"
-                  value={params[key]}
-                  onChange={(e) => handleParamChange(key, e.target.value)}
-                  step={INTEGER_PARAMS.has(key) ? 1 : 0.001}
-                  className="w-24"
-                  tooltip={PARAM_TOOLTIPS[key]}
-                />
-              </div>
-            ))}
+            {paramKeys.map((key) => {
+              const isInteger = INTEGER_PARAMS.has(key);
+              const displayValue = isInteger ? params[key] : parseFloat(params[key].toFixed(3));
+              return (
+                <div key={key} className="flex items-center gap-2">
+                  <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide truncate" title={PARAM_TOOLTIPS[key]}>
+                    {PARAM_LABELS[key]}
+                  </label>
+                  <Input
+                    type="number"
+                    value={displayValue}
+                    onChange={(e) => handleParamChange(key, e.target.value)}
+                    step={isInteger ? 1 : 0.001}
+                    className="w-24"
+                    tooltip={PARAM_TOOLTIPS[key]}
+                  />
+                </div>
+              );
+            })}
           </div>
         </Collapsible>
       ))}
@@ -83,9 +87,9 @@ export function ParameterPanel({
             <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Smooth Factor</label>
             <Input
               type="number"
-              value={smooth}
+              value={parseFloat(smooth.toFixed(3))}
               onChange={(e) => setSmooth(parseFloat(e.target.value) || 0)}
-              step={0.0001}
+              step={0.001}
               min={0}
               max={1}
               className="w-24"
@@ -102,9 +106,9 @@ export function ParameterPanel({
               <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Addendum Fillet</label>
               <Input
                 type="number"
-                value={filletAdd}
+                value={parseFloat(filletAdd.toFixed(3))}
                 onChange={(e) => setFilletAdd(parseFloat(e.target.value) || 0)}
-                step={0.01}
+                step={0.001}
                 min={0}
                 className="w-24"
                 suffix="mm"
@@ -114,9 +118,9 @@ export function ParameterPanel({
               <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Dedendum Fillet</label>
               <Input
                 type="number"
-                value={filletDed}
+                value={parseFloat(filletDed.toFixed(3))}
                 onChange={(e) => setFilletDed(parseFloat(e.target.value) || 0)}
-                step={0.01}
+                step={0.001}
                 min={0}
                 className="w-24"
                 suffix="mm"
