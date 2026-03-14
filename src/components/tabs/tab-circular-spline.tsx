@@ -14,6 +14,8 @@ import { ExportDialog } from '@/components/calculator/export-dialog';
 export function TabCircularSpline() {
   const params = useCalculatorStore((state) => state.params);
   const smooth = useCalculatorStore((state) => state.smooth);
+  const filletAdd = useCalculatorStore((state) => state.filletAdd);
+  const filletDed = useCalculatorStore((state) => state.filletDed);
   const setError = useCalculatorStore((state) => state.setError);
   const setComputing = useCalculatorStore((state) => state.setComputing);
 
@@ -59,7 +61,7 @@ export function TabCircularSpline() {
       setRpC(rp_c);
 
       // Build full circular spline using the shared function (matches Python GUI)
-      const csResult = buildFullCircularSpline(params, flank, rp_c, 100, 0.2, 0.2);
+      const csResult = buildFullCircularSpline(params, flank, rp_c, 100, filletAdd, filletDed);
 
       if (csResult.error) {
         setError(csResult.error);
@@ -82,7 +84,7 @@ export function TabCircularSpline() {
       setIsComputingLocal(false);
       setComputing(false);
     }
-  }, [params, smooth, setError, setComputing]);
+  }, [params, smooth, filletAdd, filletDed, setError, setComputing]);
 
   // Initial compute on mount
   React.useEffect(() => {
@@ -150,7 +152,7 @@ export function TabCircularSpline() {
         <div className="panel">
           <div className="panel-header">Parameters</div>
           <div className="panel-body">
-            <ParameterPanel includeSmooth onUpdate={handleUpdate} />
+            <ParameterPanel includeFillets onUpdate={handleUpdate} />
           </div>
         </div>
 

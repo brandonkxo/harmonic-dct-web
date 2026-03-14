@@ -41,7 +41,7 @@ export function Tabs({
 
   return (
     <TabsContext.Provider value={{ activeTab: currentTab, setActiveTab }}>
-      <div className={cn('flex flex-col', className)}>{children}</div>
+      <div className={cn('flex flex-col h-full', className)}>{children}</div>
     </TabsContext.Provider>
   );
 }
@@ -116,5 +116,5 @@ export function TabsContent({ value, children, className }: TabsContentProps) {
 
   if (activeTab !== value) return null;
 
-  return <div className={cn('flex-1', className)}>{children}</div>;
+  return <div className={cn('flex-1 h-full', className)}>{children}</div>;
 }

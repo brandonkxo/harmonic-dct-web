@@ -74,7 +74,7 @@ export const useCalculatorStore = create<CalculatorState>()(
       smooth: DEFAULT_SMOOTH,
       filletAdd: DEFAULT_FILLET_ADD,
       filletDed: DEFAULT_FILLET_DED,
-      activeTab: 'flexspline-tooth',
+      activeTab: 'flexspline-full',
       isComputing: false,
       computeProgress: 0,
       lastError: null,

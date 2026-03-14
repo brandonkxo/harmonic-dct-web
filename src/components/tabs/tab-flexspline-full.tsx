@@ -23,7 +23,7 @@ export function TabFlexsplineFull() {
   const [showDeformed, setShowDeformed] = React.useState(false);
   const [showExport, setShowExport] = React.useState(false);
   const [status, setStatus] = React.useState<{ message: string; type: 'info' | 'success' | 'error' }>({
-    message: 'Click Update to build full flexspline gear.',
+    message: 'Click Update to build flexspline gear.',
     type: 'info',
   });
 
@@ -137,7 +137,6 @@ export function TabFlexsplineFull() {
           <div className="panel-header">Parameters</div>
           <div className="panel-body">
             <ParameterPanel
-              includeSmooth
               includeFillets
               onUpdate={handleUpdate}
             />
@@ -177,7 +176,7 @@ export function TabFlexsplineFull() {
       <div className="flex-1 min-h-[300px] lg:min-h-0">
         <PlotView
           traces={traces}
-          title={showDeformed ? 'Deformed Flexspline' : 'Full Flexspline Gear'}
+          title={showDeformed ? 'Deformed Flexspline' : 'Flexspline Gear'}
           xAxisLabel="X (mm)"
           yAxisLabel="Y (mm)"
           className="h-full"

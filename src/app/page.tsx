@@ -16,9 +16,7 @@ import {
 import type { TabId } from '@/types';
 
 const TAB_CONFIG: { id: TabId; label: string; shortLabel: string }[] = [
-  { id: 'flexspline-tooth', label: 'Flexspline Tooth', shortLabel: 'FS Tooth' },
-  { id: 'conjugate-tooth', label: 'Conjugate Tooth', shortLabel: 'Conjugate' },
-  { id: 'flexspline-full', label: 'Full Flexspline', shortLabel: 'Full FS' },
+  { id: 'flexspline-full', label: 'Flexspline', shortLabel: 'FS' },
   { id: 'circular-spline', label: 'Circular Spline', shortLabel: 'CS' },
   { id: 'radial-modification', label: 'Radial Modification', shortLabel: 'Radial' },
   { id: 'longitudinal-modification', label: 'Longitudinal Mod', shortLabel: 'Longitud' },
@@ -41,8 +39,8 @@ export default function Home() {
         e.preventDefault();
         useCalculatorStore.getState().redo();
       }
-      // Tab switching: Ctrl+1-6
-      if (e.ctrlKey && e.key >= '1' && e.key <= '6') {
+      // Tab switching: Ctrl+1-4
+      if (e.ctrlKey && e.key >= '1' && e.key <= '4') {
         e.preventDefault();
         const tabIndex = parseInt(e.key) - 1;
         if (tabIndex < TAB_CONFIG.length) {
@@ -74,13 +72,7 @@ export default function Home() {
             ))}
           </TabsList>
 
-          <div className="flex-1 overflow-auto p-2">
-            <TabsContent value="flexspline-tooth">
-              <TabFlexsplineTooth />
-            </TabsContent>
-            <TabsContent value="conjugate-tooth">
-              <TabConjugateTooth />
-            </TabsContent>
+          <div className="flex-1 overflow-auto p-2 h-full">
             <TabsContent value="flexspline-full">
               <TabFlexsplineFull />
             </TabsContent>

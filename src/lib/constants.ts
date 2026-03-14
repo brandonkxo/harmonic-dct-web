@@ -86,7 +86,7 @@ export const INTEGER_PARAMS = new Set<keyof GearParams>(['z_f', 'z_c']);
 // Default fillet radii
 export const DEFAULT_FILLET_ADD = 0.15;
 export const DEFAULT_FILLET_DED = 0.1;
-export const DEFAULT_SMOOTH = 0.001;
+export const DEFAULT_SMOOTH = 0.1;
 
 // Output categories for the output panel
 export const OUTPUT_CATEGORIES = {

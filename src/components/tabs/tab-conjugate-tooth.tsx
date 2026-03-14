@@ -157,10 +157,7 @@ export function TabConjugateTooth() {
         <div className="panel">
           <div className="panel-header">Parameters</div>
           <div className="panel-body">
-            <ParameterPanel
-              includeSmooth
-              onUpdate={handleUpdate}
-            />
+            <ParameterPanel onUpdate={handleUpdate} />
           </div>
         </div>
 

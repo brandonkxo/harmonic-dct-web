@@ -387,7 +387,6 @@ export function TabRadialModification() {
           <div className="panel-header">Parameters</div>
           <div className="panel-body">
             <ParameterPanel
-              includeSmooth
               includeFillets
               onUpdate={handleUpdate}
             />

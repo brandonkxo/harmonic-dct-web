@@ -109,8 +109,7 @@ export function PlotView({
   const config: Partial<Plotly.Config> = {
     responsive: true,
     scrollZoom: true,
-    displayModeBar: true,
-    modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+    displayModeBar: false,
     displaylogo: false,
   };
 

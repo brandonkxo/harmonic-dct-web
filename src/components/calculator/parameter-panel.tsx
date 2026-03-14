@@ -9,23 +9,19 @@ import { Button } from '@/components/ui/button';
 import type { GearParams } from '@/types';
 
 interface ParameterPanelProps {
-  includeSmooth?: boolean;
   includeFillets?: boolean;
   onUpdate?: () => void;
 }
 
 export function ParameterPanel({
-  includeSmooth = false,
   includeFillets = false,
   onUpdate,
 }: ParameterPanelProps) {
   const {
     params,
-    smooth,
     filletAdd,
     filletDed,
     setParam,
-    setSmooth,
     setFilletAdd,
     setFilletDed,
     resetToDefaults,
@@ -80,24 +76,6 @@ export function ParameterPanel({
         </Collapsible>
       ))}
 
-      {/* Smoothing */}
-      {includeSmooth && (
-        <Collapsible title="Smoothing" defaultOpen={false}>
-          <div className="flex items-center gap-2">
-            <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Smooth Factor</label>
-            <Input
-              type="number"
-              value={parseFloat(smooth.toFixed(3))}
-              onChange={(e) => setSmooth(parseFloat(e.target.value) || 0)}
-              step={0.001}
-              min={0}
-              max={1}
-              className="w-24"
-            />
-          </div>
-        </Collapsible>
-      )}
-
       {/* Fillets */}
       {includeFillets && (
         <Collapsible title="Fillet Radii" defaultOpen={false}>
@@ -111,7 +89,6 @@ export function ParameterPanel({
                 step={0.001}
                 min={0}
                 className="w-24"
-                suffix="mm"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -123,7 +100,6 @@ export function ParameterPanel({
                 step={0.001}
                 min={0}
                 className="w-24"
-                suffix="mm"
               />
             </div>
           </div>

@@ -22,9 +22,14 @@ export function Footer() {
           )}
         </div>
         <div className="flex items-center gap-4">
-          <span className="hidden sm:inline">
+          <a
+            href="/liu-et-al-2025.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline hover:text-surface-900 underline"
+          >
             Based on Liu et al., Machines 2025
-          </span>
+          </a>
           <a
             href="https://github.com"
             target="_blank"
