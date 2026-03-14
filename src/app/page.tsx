@@ -54,14 +54,14 @@ export default function Home() {
   }, [setActiveTab]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-300">
+    <div className="h-screen flex flex-col bg-surface-300 overflow-hidden">
       <Header />
 
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <Tabs
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as TabId)}
-          className="flex-1 flex flex-col"
+          className="flex-1 flex flex-col min-h-0"
         >
           <TabsList>
             {TAB_CONFIG.map((tab) => (
@@ -72,7 +72,7 @@ export default function Home() {
             ))}
           </TabsList>
 
-          <div className="flex-1 overflow-hidden p-2">
+          <div className="flex-1 min-h-0 overflow-hidden p-2">
             <TabsContent value="flexspline-full">
               <TabFlexsplineFull />
             </TabsContent>
