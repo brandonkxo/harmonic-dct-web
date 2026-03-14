@@ -565,7 +565,7 @@ export function TabRadialModification() {
               <Button variant="secondary" size="sm" onClick={() => setShowUnsavedWarning(false)}>
                 Cancel
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => setShowExport(true)}>
+              <Button variant="secondary" size="sm" onClick={() => { setShowUnsavedWarning(false); setShowExport(true); }}>
                 Export First
               </Button>
               <Button
