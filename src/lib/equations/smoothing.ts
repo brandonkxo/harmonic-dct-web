@@ -1,62 +1,129 @@
 /**
  * B-spline smoothing for conjugate profile branches
  *
- * Pure TypeScript implementation without scipy dependency.
- * Uses cubic B-spline interpolation.
+ * Implements parametric cubic spline fitting similar to scipy's splprep/splev.
  */
 
 import type { PointTuple, ConjugateResult } from '@/types';
 
 /**
- * Simple cubic B-spline basis function
+ * Solve a tridiagonal system using Thomas algorithm.
+ * For natural cubic spline, we need to solve for second derivatives.
  */
-function bsplineBasis(t: number): number[] {
-  const t2 = t * t;
-  const t3 = t2 * t;
-  const mt = 1 - t;
-  const mt2 = mt * mt;
-  const mt3 = mt2 * mt;
+function solveTridiagonal(
+  a: number[],  // sub-diagonal
+  b: number[],  // main diagonal
+  c: number[],  // super-diagonal
+  d: number[]   // right-hand side
+): number[] {
+  const n = d.length;
+  const cp = new Array(n);
+  const dp = new Array(n);
+  const x = new Array(n);
 
-  return [
-    mt3 / 6,
-    (3 * t3 - 6 * t2 + 4) / 6,
-    (-3 * t3 + 3 * t2 + 3 * t + 1) / 6,
-    t3 / 6,
-  ];
+  // Forward sweep
+  cp[0] = c[0] / b[0];
+  dp[0] = d[0] / b[0];
+  for (let i = 1; i < n; i++) {
+    const denom = b[i] - a[i] * cp[i - 1];
+    cp[i] = c[i] / denom;
+    dp[i] = (d[i] - a[i] * dp[i - 1]) / denom;
+  }
+
+  // Back substitution
+  x[n - 1] = dp[n - 1];
+  for (let i = n - 2; i >= 0; i--) {
+    x[i] = dp[i] - cp[i] * x[i + 1];
+  }
+
+  return x;
 }
 
 /**
- * Catmull-Rom spline interpolation for smoother curves
+ * Natural cubic spline interpolation for a single coordinate.
+ * Returns coefficients for each segment.
  */
-function catmullRomInterpolate(
-  p0: PointTuple,
-  p1: PointTuple,
-  p2: PointTuple,
-  p3: PointTuple,
-  t: number,
-  tension: number = 0.5
-): PointTuple {
-  const t2 = t * t;
-  const t3 = t2 * t;
+function cubicSplineCoefficients(
+  t: number[],  // parameter values
+  y: number[]   // coordinate values
+): { a: number[]; b: number[]; c: number[]; d: number[] } {
+  const n = t.length - 1;  // number of segments
 
-  const c1 = tension * (p2[0] - p0[0]);
-  const c2 = tension * (p2[1] - p0[1]);
-  const c3 = tension * (p3[0] - p1[0]);
-  const c4 = tension * (p3[1] - p1[1]);
+  // Compute h_i = t[i+1] - t[i]
+  const h: number[] = [];
+  for (let i = 0; i < n; i++) {
+    h.push(t[i + 1] - t[i]);
+  }
 
-  const x =
-    (2 * t3 - 3 * t2 + 1) * p1[0] +
-    (t3 - 2 * t2 + t) * c1 +
-    (-2 * t3 + 3 * t2) * p2[0] +
-    (t3 - t2) * c3;
+  // Set up tridiagonal system for second derivatives (natural spline: M_0 = M_n = 0)
+  // For interior points: h[i-1]*M[i-1] + 2*(h[i-1]+h[i])*M[i] + h[i]*M[i+1] = 6*((y[i+1]-y[i])/h[i] - (y[i]-y[i-1])/h[i-1])
+  if (n < 2) {
+    // Linear interpolation for 2 points
+    return {
+      a: [y[0]],
+      b: [(y[1] - y[0]) / (t[1] - t[0])],
+      c: [0],
+      d: [0],
+    };
+  }
 
-  const y =
-    (2 * t3 - 3 * t2 + 1) * p1[1] +
-    (t3 - 2 * t2 + t) * c2 +
-    (-2 * t3 + 3 * t2) * p2[1] +
-    (t3 - t2) * c4;
+  const subDiag: number[] = [];
+  const mainDiag: number[] = [];
+  const superDiag: number[] = [];
+  const rhs: number[] = [];
 
-  return [x, y];
+  for (let i = 1; i < n; i++) {
+    subDiag.push(h[i - 1]);
+    mainDiag.push(2 * (h[i - 1] + h[i]));
+    superDiag.push(h[i]);
+    rhs.push(6 * ((y[i + 1] - y[i]) / h[i] - (y[i] - y[i - 1]) / h[i - 1]));
+  }
+
+  // Solve for interior second derivatives
+  const M_interior = solveTridiagonal(subDiag, mainDiag, superDiag, rhs);
+
+  // Full M array with natural boundary conditions (M_0 = M_n = 0)
+  const M = [0, ...M_interior, 0];
+
+  // Compute coefficients for each segment
+  // S_i(x) = a_i + b_i*(x-t_i) + c_i*(x-t_i)^2 + d_i*(x-t_i)^3
+  const a: number[] = [];
+  const b: number[] = [];
+  const c: number[] = [];
+  const d: number[] = [];
+
+  for (let i = 0; i < n; i++) {
+    a.push(y[i]);
+    b.push((y[i + 1] - y[i]) / h[i] - h[i] * (2 * M[i] + M[i + 1]) / 6);
+    c.push(M[i] / 2);
+    d.push((M[i + 1] - M[i]) / (6 * h[i]));
+  }
+
+  return { a, b, c, d };
+}
+
+/**
+ * Evaluate cubic spline at parameter u.
+ */
+function evalCubicSpline(
+  u: number,
+  t: number[],
+  coeffs: { a: number[]; b: number[]; c: number[]; d: number[] }
+): number {
+  // Find the segment
+  let i = 0;
+  for (let j = 0; j < t.length - 1; j++) {
+    if (u >= t[j] && u <= t[j + 1]) {
+      i = j;
+      break;
+    }
+    if (j === t.length - 2) {
+      i = j;  // clamp to last segment
+    }
+  }
+
+  const du = u - t[i];
+  return coeffs.a[i] + coeffs.b[i] * du + coeffs.c[i] * du * du + coeffs.d[i] * du * du * du;
 }
 
 /**
@@ -73,28 +140,11 @@ function computeChordLengths(pts: PointTuple[]): number[] {
 }
 
 /**
- * Find the segment index and local t for a given parameter u
- */
-function findSegment(u: number, lengths: number[]): { index: number; t: number } {
-  const totalLength = lengths[lengths.length - 1];
-  const targetLength = u * totalLength;
-
-  for (let i = 1; i < lengths.length; i++) {
-    if (lengths[i] >= targetLength) {
-      const segLength = lengths[i] - lengths[i - 1];
-      const t = segLength > 0 ? (targetLength - lengths[i - 1]) / segLength : 0;
-      return { index: i - 1, t };
-    }
-  }
-
-  return { index: lengths.length - 2, t: 1 };
-}
-
-/**
- * Fit a parametric smoothing spline to a single branch using Catmull-Rom.
+ * Fit a parametric smoothing spline to a single branch.
+ * This implementation matches scipy's splprep/splev behavior more closely.
  *
  * @param pts List of (x, y) points (must have >= 4 points)
- * @param s Smoothing factor (0-1, higher = smoother) - affects tension
+ * @param s Smoothing factor (0-1, higher = smoother) - used for averaging
  * @param numOut Number of resampled output points
  * @returns Resampled points along the smooth spline
  */
@@ -107,54 +157,63 @@ export function smoothBranch(
     return pts;
   }
 
-  // Apply optional smoothing by averaging nearby points
+  // Optional pre-smoothing by local averaging (similar to scipy's smoothing parameter effect)
   let workPts = [...pts];
   if (s > 0 && s < 1) {
     const smoothed: PointTuple[] = [];
-    const windowSize = Math.max(1, Math.floor(s * 10));
+    // Use a smaller window for less aggressive smoothing
+    const windowSize = Math.max(1, Math.floor(s * 5));
 
     for (let i = 0; i < workPts.length; i++) {
       let sumX = 0;
       let sumY = 0;
-      let count = 0;
+      let totalWeight = 0;
 
       for (let j = Math.max(0, i - windowSize); j <= Math.min(workPts.length - 1, i + windowSize); j++) {
-        sumX += workPts[j][0];
-        sumY += workPts[j][1];
-        count++;
+        // Gaussian-like weighting
+        const dist = Math.abs(j - i);
+        const weight = Math.exp(-dist * dist / (2 * windowSize * windowSize + 0.01));
+        sumX += workPts[j][0] * weight;
+        sumY += workPts[j][1] * weight;
+        totalWeight += weight;
       }
 
-      smoothed.push([sumX / count, sumY / count]);
+      smoothed.push([sumX / totalWeight, sumY / totalWeight]);
     }
+
+    // Preserve endpoints exactly (important for correct dedendum radius)
+    smoothed[0] = [...workPts[0]];
+    smoothed[smoothed.length - 1] = [...workPts[workPts.length - 1]];
+
     workPts = smoothed;
   }
 
-  // Add phantom points at the ends for Catmull-Rom
-  const extended: PointTuple[] = [
-    [2 * workPts[0][0] - workPts[1][0], 2 * workPts[0][1] - workPts[1][1]],
-    ...workPts,
-    [
-      2 * workPts[workPts.length - 1][0] - workPts[workPts.length - 2][0],
-      2 * workPts[workPts.length - 1][1] - workPts[workPts.length - 2][1],
-    ],
-  ];
+  // Compute chord-length parameterization (like scipy)
+  const chordLengths = computeChordLengths(workPts);
+  const totalLength = chordLengths[chordLengths.length - 1];
 
-  // Compute chord-length parameterization
-  const lengths = computeChordLengths(workPts);
+  if (totalLength < 1e-12) {
+    return pts;
+  }
 
-  // Sample the spline
+  // Normalize to [0, 1]
+  const t = chordLengths.map(l => l / totalLength);
+
+  // Extract x and y coordinates
+  const xCoords = workPts.map(p => p[0]);
+  const yCoords = workPts.map(p => p[1]);
+
+  // Fit cubic splines to x(t) and y(t)
+  const xCoeffs = cubicSplineCoefficients(t, xCoords);
+  const yCoeffs = cubicSplineCoefficients(t, yCoords);
+
+  // Sample the parametric spline
   const result: PointTuple[] = [];
   for (let i = 0; i < numOut; i++) {
     const u = i / (numOut - 1);
-    const { index, t } = findSegment(u, lengths);
-
-    // Get the four control points (with offset for extended array)
-    const p0 = extended[index];
-    const p1 = extended[index + 1];
-    const p2 = extended[index + 2];
-    const p3 = extended[index + 3];
-
-    result.push(catmullRomInterpolate(p0, p1, p2, p3, t));
+    const x = evalCubicSpline(u, t, xCoeffs);
+    const y = evalCubicSpline(u, t, yCoeffs);
+    result.push([x, y]);
   }
 
   return result;

@@ -521,3 +521,349 @@ export function buildDeformedFlexspline(
     z_f,
   };
 }
+
+/**
+ * Build the full circular spline (internal gear) from the smoothed conjugate flank.
+ * Exact port of Python build_full_circular_spline() function from Harmonic DCT Calc.
+ *
+ * Uses the pre-computed smoothed_flank (one side of the conjugate tooth
+ * in tooth-local coords where y_local = y_g - rp_c) and mirrors it to
+ * form a complete tooth, then repeats z_c times with dedendum arc
+ * connections.
+ *
+ * @param params - Gear parameters dict
+ * @param smoothedFlank - List of (x, y_local) for one flank, sorted addendum→dedendum (y descending)
+ * @param rp_c - Circular spline pitch radius
+ * @param n_ded_arc - Number of interpolation points per dedendum arc
+ * @param r_fillet_add - Addendum-side fillet radius
+ * @param r_fillet_ded - Dedendum-side fillet radius (defaults to r_fillet_add)
+ *
+ * @returns Object with chain_xy (continuous outline), rp_c, r_add, r_ded, ha, hf, z_c
+ *          Or { error: msg } on failure.
+ */
+export function buildFullCircularSpline(
+  params: GearParams,
+  smoothedFlank: PointTuple[],
+  rp_c: number,
+  n_ded_arc: number = 39,
+  r_fillet_add: number = 0.2,
+  r_fillet_ded: number | null = null
+): {
+  chain_xy: PointTuple[];
+  rp_c: number;
+  r_add: number;
+  r_ded: number;
+  ha: number;
+  hf: number;
+  z_c: number;
+  error?: string;
+} {
+  if (smoothedFlank.length < 2) {
+    return {
+      chain_xy: [],
+      rp_c,
+      r_add: rp_c,
+      r_ded: rp_c,
+      ha: params.ha,
+      hf: params.hf,
+      z_c: Math.floor(params.z_c),
+      error: "Smoothed flank too short to pattern.",
+    };
+  }
+
+  // Extract parameters (matching Python exactly)
+  const z_c = Math.floor(params.z_c);
+  const m = params.m;
+  const z_f = params.z_f;
+  const ha = params.ha;
+  const hf = params.hf;
+
+  // Compute s and t from coefficient inputs (matching Python)
+  const mu_s = params.mu_s;
+  const mu_t = params.mu_t;
+  const s = mu_s * m * z_f;
+  const t = mu_t * s;
+  const ds = s - t / 2.0;
+
+  // Right flank: addendum (top) -> dedendum (bottom), y descending
+  const right_flank_raw = [...smoothedFlank];
+
+  if (r_fillet_ded === null) r_fillet_ded = r_fillet_add;
+  r_fillet_add = Math.max(0.0, r_fillet_add);
+  r_fillet_ded = Math.max(0.0, r_fillet_ded);
+
+  // Helper: compute circle passing through 3 points (local to this function like Python)
+  function _circleFrom3Pts(p1: PointTuple, p2: PointTuple, p3: PointTuple): { cx: number; cy: number; r: number } | null {
+    const [x1, y1] = p1;
+    const [x2, y2] = p2;
+    const [x3, y3] = p3;
+    const d = 2.0 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
+    if (Math.abs(d) < 1e-12) return null;
+    const ux = ((x1 * x1 + y1 * y1) * (y2 - y3) +
+                (x2 * x2 + y2 * y2) * (y3 - y1) +
+                (x3 * x3 + y3 * y3) * (y1 - y2)) / d;
+    const uy = ((x1 * x1 + y1 * y1) * (x3 - x2) +
+                (x2 * x2 + y2 * y2) * (x1 - x3) +
+                (x3 * x3 + y3 * y3) * (x2 - x1)) / d;
+    return { cx: ux, cy: uy, r: Math.sqrt((x1 - ux) ** 2 + (y1 - uy) ** 2) };
+  }
+
+  // Helper: generate arc points (local to this function like Python)
+  function _shortArc(startAngle: number, endAngle: number, nPts: number, cx: number, cy: number, radius: number): PointTuple[] {
+    let dTheta = endAngle - startAngle;
+    if (dTheta > Math.PI) dTheta -= 2.0 * Math.PI;
+    else if (dTheta < -Math.PI) dTheta += 2.0 * Math.PI;
+    const pts: PointTuple[] = [];
+    for (let k = 0; k <= nPts; k++) {
+      const frac = k / nPts;
+      const th = startAngle + frac * dTheta;
+      pts.push([cx + radius * Math.cos(th), cy + radius * Math.sin(th)]);
+    }
+    return pts;
+  }
+
+  let use_fillets = false;
+  let right_flank: PointTuple[] = [...right_flank_raw];
+  const y_add = right_flank_raw[0][1];
+  const y_ded = right_flank_raw[right_flank_raw.length - 1][1];
+  let pt_add_trim_r: PointTuple = right_flank_raw[0];
+  let pt_add_trim_l: PointTuple = [-pt_add_trim_r[0], pt_add_trim_r[1]];
+  let pt_ded_trim_r: PointTuple = right_flank_raw[right_flank_raw.length - 1];
+  let pt_ded_trim_l: PointTuple = [-pt_ded_trim_r[0], pt_ded_trim_r[1]];
+  let fillet_right: PointTuple[] = [];
+  let fillet_left: PointTuple[] = [];
+  let fillet_root_right: PointTuple[] = [];
+  let fillet_root_left: PointTuple[] = [];
+
+  // Try to compute fillets if we have enough points
+  if (right_flank_raw.length >= 6 && r_fillet_add > 0.0 && r_fillet_ded > 0.0) {
+    const top_circle = _circleFrom3Pts(right_flank_raw[0], right_flank_raw[1], right_flank_raw[2]);
+    const bot_circle = _circleFrom3Pts(
+      right_flank_raw[right_flank_raw.length - 3],
+      right_flank_raw[right_flank_raw.length - 2],
+      right_flank_raw[right_flank_raw.length - 1]
+    );
+
+    if (top_circle !== null && bot_circle !== null) {
+      const { cx: x1_R, cy: y1_R, r: r1 } = top_circle;
+      const { cx: x2_R, cy: y2_R, r: r2 } = bot_circle;
+
+      // Addendum fillet
+      const cy_fillet = y_add - r_fillet_add;
+      const dy = cy_fillet - y1_R;
+      const r_inner = Math.max(r1 - r_fillet_add, 0.0);
+      const dx_sq = r_inner * r_inner - dy * dy;
+
+      if (dx_sq >= 0.0) {
+        // Determine fillet center position based on arc center relative to profile
+        // If arc center is LEFT of profile point, fillet goes to the right (+)
+        // If arc center is RIGHT of profile point, fillet goes to the left (-)
+        const profile_x_top = right_flank_raw[0][0];
+        const cx_fillet = x1_R < profile_x_top
+          ? x1_R + Math.sqrt(dx_sq)
+          : x1_R - Math.sqrt(dx_sq);
+
+        const dist_to_fillet = Math.sqrt((cx_fillet - x1_R) ** 2 + (cy_fillet - y1_R) ** 2);
+
+        if (dist_to_fillet > 1e-9) {
+          const dir_x = (cx_fillet - x1_R) / dist_to_fillet;
+          const dir_y = (cy_fillet - y1_R) / dist_to_fillet;
+          const pt_AB_trim: PointTuple = [x1_R + r1 * dir_x, y1_R + r1 * dir_y];
+          pt_add_trim_r = [cx_fillet, y_add];
+
+          // Dedendum fillet
+          const cy_root = y_ded + r_fillet_ded;
+          const dy_root = cy_root - y2_R;
+          const r_inner_root = Math.max(r2 - r_fillet_ded, 0.0);
+          const dx_root_sq = r_inner_root * r_inner_root - dy_root * dy_root;
+
+          if (dx_root_sq >= 0.0) {
+            // Determine fillet center position based on arc center relative to profile
+            // If arc center is RIGHT of profile point, fillet goes to the left (-)
+            // If arc center is LEFT of profile point, fillet goes to the right (+)
+            const profile_x_bot = right_flank_raw[right_flank_raw.length - 1][0];
+            const cx_root = x2_R > profile_x_bot
+              ? x2_R - Math.sqrt(dx_root_sq)
+              : x2_R + Math.sqrt(dx_root_sq);
+
+            const dist_to_root = Math.sqrt((cx_root - x2_R) ** 2 + (cy_root - y2_R) ** 2);
+
+            if (dist_to_root > 1e-9) {
+              const dir_x_root = (cx_root - x2_R) / dist_to_root;
+              const dir_y_root = (cy_root - y2_R) / dist_to_root;
+              const pt_CD_trim: PointTuple = [x2_R + r2 * dir_x_root, y2_R + r2 * dir_y_root];
+              pt_ded_trim_r = [cx_root, y_ded];
+
+              // Generate fillet arcs first, then find where they intersect the profile
+              const n_fillet = 12;
+
+              // Generate addendum fillet arc (from addendum line down into tooth)
+              const th_add_line = Math.atan2(pt_add_trim_r[1] - cy_fillet, pt_add_trim_r[0] - cx_fillet);
+              // Extend arc further than needed to find intersection
+              const th_add_extend = th_add_line - Math.PI / 2;  // 90 degrees past addendum
+              const fillet_arc_full = _shortArc(th_add_extend, th_add_line, n_fillet * 2, cx_fillet, cy_fillet, r_fillet_add);
+
+              // Find where fillet arc intersects/meets the profile (closest approach)
+              let best_fillet_idx = 0;
+              let best_profile_idx = 0;
+              let best_dist = Infinity;
+              for (let fi = 0; fi < fillet_arc_full.length; fi++) {
+                const fpt = fillet_arc_full[fi];
+                for (let pi = 0; pi < right_flank_raw.length; pi++) {
+                  const ppt = right_flank_raw[pi];
+                  const d = Math.sqrt((fpt[0] - ppt[0]) ** 2 + (fpt[1] - ppt[1]) ** 2);
+                  if (d < best_dist) {
+                    best_dist = d;
+                    best_fillet_idx = fi;
+                    best_profile_idx = pi;
+                  }
+                }
+              }
+
+              // Trim profile: keep points from intersection down (lower y values)
+              // Profile is ordered top to bottom (y descending)
+              const right_flank_trimmed_top = right_flank_raw.slice(best_profile_idx);
+
+              // The fillet starts at the intersection point and goes to addendum
+              const fillet_start_pt = fillet_arc_full[best_fillet_idx];
+              const th0 = Math.atan2(fillet_start_pt[1] - cy_fillet, fillet_start_pt[0] - cx_fillet);
+              const th1 = Math.atan2(pt_add_trim_r[1] - cy_fillet, pt_add_trim_r[0] - cx_fillet);
+              fillet_right = _shortArc(th0, th1, n_fillet, cx_fillet, cy_fillet, r_fillet_add);
+              fillet_left = fillet_right.map(([x, y]): PointTuple => [-x, y]);
+
+              // Trim bottom of profile using angle-based filtering (original approach)
+              const angle_cd_trim = Math.atan2(pt_CD_trim[1] - y2_R, pt_CD_trim[0] - x2_R);
+              right_flank = [];
+              for (const pt of right_flank_trimmed_top) {
+                const angle_pt = Math.atan2(pt[1] - y2_R, pt[0] - x2_R);
+                if (angle_pt <= angle_cd_trim + 1e-9) {
+                  right_flank.push(pt);
+                }
+              }
+              if (right_flank.length > 0) {
+                const last_pt = right_flank[right_flank.length - 1];
+                const dist_to_trim = Math.sqrt((last_pt[0] - pt_CD_trim[0]) ** 2 + (last_pt[1] - pt_CD_trim[1]) ** 2);
+                if (dist_to_trim > 1e-6) {
+                  right_flank.push(pt_CD_trim);
+                }
+              } else {
+                right_flank = [...right_flank_trimmed_top];
+              }
+
+              // Dedendum fillet uses the theoretical trim point (original approach)
+              const tr0 = Math.atan2(pt_CD_trim[1] - cy_root, pt_CD_trim[0] - cx_root);
+              const tr1 = Math.atan2(pt_ded_trim_r[1] - cy_root, pt_ded_trim_r[0] - cx_root);
+              fillet_root_right = _shortArc(tr0, tr1, n_fillet, cx_root, cy_root, r_fillet_ded);
+              fillet_root_left = fillet_root_right.slice().reverse().map(([x, y]): PointTuple => [-x, y]);
+
+              pt_add_trim_l = [-pt_add_trim_r[0], pt_add_trim_r[1]];
+              pt_ded_trim_l = [-pt_ded_trim_r[0], pt_ded_trim_r[1]];
+              use_fillets = true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Left flank: mirror and reverse (dedendum -> addendum)
+  const left_flank: PointTuple[] = right_flank.slice().reverse().map(([x, y]): PointTuple => [-x, y]);
+
+  // Dedendum radius for circular spline
+  const r_ded = rp_c + y_ded;
+
+  // Angular pitch
+  const pitch_angle = 2.0 * Math.PI / z_c;
+
+  function local_to_polar(x_loc: number, y_loc: number, tooth_offset_angle: number): PointTuple {
+    const r = rp_c + y_loc;
+    const theta = x_loc / rp_c + tooth_offset_angle;
+    return [r * Math.sin(theta), r * Math.cos(theta)];
+  }
+
+  // Angular positions of dedendum endpoints
+  const pt_D = use_fillets ? pt_ded_trim_r : right_flank[right_flank.length - 1];
+  const pt_Dp = use_fillets ? pt_ded_trim_l : left_flank[0];
+  const theta_D = pt_D[0] / rp_c;
+  const theta_Dp = pt_Dp[0] / rp_c;
+
+  const chain_xy: PointTuple[] = [];
+
+  for (let i = 0; i < z_c; i++) {
+    const angle_i = i * pitch_angle;
+
+    // Left root fillet (if using fillets)
+    if (use_fillets) {
+      for (const [x_loc, y_loc] of fillet_root_left) {
+        chain_xy.push(local_to_polar(x_loc, y_loc, angle_i));
+      }
+    }
+
+    // Left flank: D' -> A' (dedendum up to addendum)
+    for (const [x_loc, y_loc] of left_flank) {
+      chain_xy.push(local_to_polar(x_loc, y_loc, angle_i));
+    }
+
+    if (use_fillets) {
+      // Left fillet
+      for (const [x_loc, y_loc] of fillet_left) {
+        chain_xy.push(local_to_polar(x_loc, y_loc, angle_i));
+      }
+
+      // Addendum line
+      for (let j = 1; j < n_ded_arc; j++) {
+        const frac = j / n_ded_arc;
+        const x_add = pt_add_trim_l[0] + frac * (pt_add_trim_r[0] - pt_add_trim_l[0]);
+        const y_add_seg = pt_add_trim_l[1] + frac * (pt_add_trim_r[1] - pt_add_trim_l[1]);
+        chain_xy.push(local_to_polar(x_add, y_add_seg, angle_i));
+      }
+
+      // Right fillet (reversed)
+      for (let k = fillet_right.length - 1; k >= 0; k--) {
+        const [x_loc, y_loc] = fillet_right[k];
+        chain_xy.push(local_to_polar(x_loc, y_loc, angle_i));
+      }
+    }
+
+    // Right flank: A -> D (addendum down to dedendum)
+    for (const [x_loc, y_loc] of right_flank) {
+      chain_xy.push(local_to_polar(x_loc, y_loc, angle_i));
+    }
+
+    // Right root fillet (if using fillets)
+    if (use_fillets) {
+      for (const [x_loc, y_loc] of fillet_root_right) {
+        chain_xy.push(local_to_polar(x_loc, y_loc, angle_i));
+      }
+    }
+
+    // Dedendum arc: D of tooth i -> D' of tooth i+1
+    const next_i = (i + 1) % z_c;
+    const angle_next = next_i * pitch_angle;
+    let theta_start = theta_D + angle_i;
+    let theta_end = theta_Dp + angle_next;
+
+    if (theta_end < theta_start) {
+      theta_end += 2.0 * Math.PI;
+    }
+
+    for (let j = 1; j <= n_ded_arc; j++) {
+      const frac = j / n_ded_arc;
+      const th = theta_start + frac * (theta_end - theta_start);
+      chain_xy.push([r_ded * Math.sin(th), r_ded * Math.cos(th)]);
+    }
+  }
+
+  // Reference radii
+  const r_add = rp_c + y_add;
+
+  return {
+    chain_xy,
+    rp_c,
+    r_add,
+    r_ded,
+    ha,
+    hf,
+    z_c,
+  };
+}
