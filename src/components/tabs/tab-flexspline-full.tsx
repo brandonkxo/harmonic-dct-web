@@ -152,14 +152,14 @@ export function TabFlexsplineFull() {
 
         <div className="flex flex-wrap gap-2 items-center">
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-medium transition-colors ${!showDeformed ? 'text-blue-600' : 'text-surface-500'}`}>
+            <span className={`text-xs font-medium transition-colors ${!showDeformed ? 'text-green-700' : 'text-surface-500'}`}>
               Undeformed
             </span>
             <button
               onClick={() => setShowDeformed(!showDeformed)}
               disabled={!deformedResult}
               className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed ${
-                showDeformed ? 'bg-red-500' : 'bg-blue-500'
+                showDeformed ? 'bg-red-500' : 'bg-green-600'
               }`}
             >
               <span

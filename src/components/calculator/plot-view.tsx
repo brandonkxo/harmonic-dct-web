@@ -77,6 +77,7 @@ export function PlotView({
     paper_bgcolor: '#ffffff',
     plot_bgcolor: '#fafafa',
     font: { color: '#505050', family: 'JetBrains Mono, monospace', size: 10 },
+    uirevision: 'preserve',
     xaxis: {
       title: { text: xAxisLabel, font: { size: 10 } },
       gridcolor: '#b1b9be',
@@ -84,12 +85,14 @@ export function PlotView({
       scaleanchor: equalAspect ? 'y' : undefined,
       scaleratio: equalAspect ? 1 : undefined,
       range: xRange,
+      autorange: xRange ? false : undefined,
     },
     yaxis: {
       title: { text: yAxisLabel, font: { size: 10 } },
       gridcolor: '#b1b9be',
       zerolinecolor: '#b1b9be',
       range: yRange,
+      autorange: yRange ? false : undefined,
     },
     legend: {
       x: 1,

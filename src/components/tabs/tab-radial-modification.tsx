@@ -41,7 +41,7 @@ export function TabRadialModification() {
 
   // View state
   const [viewMode, setViewMode] = React.useState<ViewMode>('overlay');
-  const [showDeformed, setShowDeformed] = React.useState(true);
+  const [showDeformed, setShowDeformed] = React.useState(false);
   const [isComputing, setIsComputing] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
 
@@ -299,10 +299,10 @@ export function TabRadialModification() {
     }
   }, [params, smooth, filletAdd, filletDed, showDeformed, buildCircularSplineLocal, buildDebugTooth, buildDebugCsTooth, setError]);
 
-  // Initial compute on mount
+  // Initial compute on mount and when showDeformed changes
   React.useEffect(() => {
     handleUpdate();
-  }, []);
+  }, [showDeformed]);
 
   // Handle dmax calculation
   const handleCalculateDmax = React.useCallback(() => {
@@ -398,13 +398,13 @@ export function TabRadialModification() {
           <div className="panel-body space-y-2">
             <div className="flex gap-2 items-center">
               <div className="flex items-center gap-2 flex-1">
-                <span className={`text-xs font-medium transition-colors ${!showDeformed ? 'text-blue-600' : 'text-surface-500'}`}>
-                  Undef
+                <span className={`text-xs font-medium transition-colors ${!showDeformed ? 'text-green-700' : 'text-surface-500'}`}>
+                  Undeformed
                 </span>
                 <button
                   onClick={() => setShowDeformed(!showDeformed)}
                   className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
-                    showDeformed ? 'bg-red-500' : 'bg-blue-500'
+                    showDeformed ? 'bg-red-500' : 'bg-green-600'
                   }`}
                 >
                   <span
@@ -414,7 +414,7 @@ export function TabRadialModification() {
                   />
                 </button>
                 <span className={`text-xs font-medium transition-colors ${showDeformed ? 'text-red-600' : 'text-surface-500'}`}>
-                  Def
+                  Deformed
                 </span>
               </div>
               <Button
