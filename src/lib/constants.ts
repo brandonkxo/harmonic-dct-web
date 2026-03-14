@@ -7,23 +7,22 @@
 
 import type { GearParams } from '@/types';
 
-// Default parameter values from paper (Section 3.5)
-// Module m = 0.5 mm, z_f = 100, z_c = 102
+// Default parameter values from MTHBT-25M config
 export const DEFAULTS: GearParams = {
-  m: 0.5,
-  z_f: 100,     // Number of flexspline teeth (fixed, not optimized)
-  z_c: 102,     // Number of circular spline teeth
-  w0: 0.5,      // Max radial deformation omega_0 (mm)
-  r1: 0.685,
-  c1: 0.332,
-  e1: 0.155,
-  r2: 0.785,
-  c2: 0.330,
-  e2: 0.134,
-  ha: 0.275,    // Addendum height
-  hf: 0.375,    // Dedendum height
+  m: 0.4004,
+  z_f: 158,     // Number of flexspline teeth
+  z_c: 160,     // Number of circular spline teeth
+  w0: 0.38,     // Max radial deformation omega_0 (mm)
+  r1: 0.64,
+  c1: 0.345,
+  e1: 0.141,
+  r2: 0.7,
+  c2: 0.357,
+  e2: 0.18,
+  ha: 0.28,     // Addendum height
+  hf: 0.3255,   // Dedendum height
   mu_s: 0.01,   // Ring wall coefficient: s = mu_s * m * z_f
-  mu_t: 0.6,    // Cup wall coefficient: t = mu_t * s
+  mu_t: 0.7,    // Cup wall coefficient: t = mu_t * s
 };
 
 // Display labels for GUI
@@ -83,10 +82,10 @@ export const PARAM_GROUPS: Record<string, (keyof GearParams)[]> = {
 // Integer parameters that should use whole numbers
 export const INTEGER_PARAMS = new Set<keyof GearParams>(['z_f', 'z_c']);
 
-// Default fillet radii
-export const DEFAULT_FILLET_ADD = 0.15;
-export const DEFAULT_FILLET_DED = 0.1;
-export const DEFAULT_SMOOTH = 0.1;
+// Default fillet radii (from MTHBT-25M config)
+export const DEFAULT_FILLET_ADD = 0.125;
+export const DEFAULT_FILLET_DED = 0.125;
+export const DEFAULT_SMOOTH = 0.01;
 
 // Output categories for the output panel
 export const OUTPUT_CATEGORIES = {

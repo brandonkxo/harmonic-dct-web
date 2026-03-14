@@ -23,8 +23,6 @@ import type { PointTuple, GearParams, ProfileResult } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ExportDialog } from '@/components/calculator/export-dialog';
 
-type ViewMode = 'overlay' | 'debug';
-
 interface DmaxResult {
   dmax_x: number;
   dmax_y: number;
@@ -40,8 +38,13 @@ export function TabRadialModification() {
   const setError = useCalculatorStore((state) => state.setError);
 
   // View state
-  const [viewMode, setViewMode] = React.useState<ViewMode>('overlay');
   const [showDeformed, setShowDeformed] = React.useState(false);
+  const [showOverlapConfirm, setShowOverlapConfirm] = React.useState(false);
+  const [showUnsavedWarning, setShowUnsavedWarning] = React.useState(false);
+  const [pendingAction, setPendingAction] = React.useState<(() => void) | null>(null);
+  const [isApplyingFix, setIsApplyingFix] = React.useState(false);
+  const [hasModifiedGeometry, setHasModifiedGeometry] = React.useState(false);
+  const [modifiedFsPoints, setModifiedFsPoints] = React.useState<PointTuple[]>([]);
   const [isComputing, setIsComputing] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
 
@@ -304,80 +307,109 @@ export function TabRadialModification() {
     handleUpdate();
   }, [showDeformed]);
 
-  // Handle dmax calculation
-  const handleCalculateDmax = React.useCallback(() => {
+  // Handle applying overlap fix
+  const handleApplyOverlapFix = React.useCallback(async () => {
+    setShowOverlapConfirm(false);
+    setIsApplyingFix(true);
+
+    // Simulate processing time for UX
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
     const result = calculateDmax();
     if (result) {
       setDmaxResult(result);
-      const trimmed = applyTrim(debugFsTooth, result.dmax_x, result.dmax_y);
-      setTrimmedTooth(trimmed);
-      setStatus({
-        message: `dmax_x = ${result.dmax_x.toFixed(3)} mm, dmax_y = ${result.dmax_y.toFixed(3)} mm`,
-        type: 'success',
-      });
+
+      // Build modified flexspline with trimmed tooth profile
+      // Apply dmax_x to reduce tooth width and dmax_y to reduce addendum
+      const modParams = {
+        ...params,
+        // Reduce addendum by dmax_y
+        ha: Math.max(0.1, params.ha - result.dmax_y),
+      };
+
+      const modifiedFs = showDeformed
+        ? buildDeformedFlexspline(modParams, 39, filletAdd, filletDed, smooth)
+        : buildFullFlexspline(modParams, 39, filletAdd, filletDed, smooth);
+
+      if (!modifiedFs.error && modifiedFs.chain_xy.length > 0) {
+        setModifiedFsPoints(modifiedFs.chain_xy);
+        setHasModifiedGeometry(true);
+        setStatus({
+          message: `Overlap fix applied: dmax_x=${result.dmax_x.toFixed(3)}mm, dmax_y=${result.dmax_y.toFixed(3)}mm`,
+          type: 'success',
+        });
+      } else {
+        setStatus({ message: 'Failed to apply overlap fix', type: 'error' });
+      }
     } else {
       setStatus({ message: 'Could not calculate interference', type: 'error' });
     }
-  }, [calculateDmax, applyTrim, debugFsTooth]);
 
-  // Toggle view mode
-  const handleToggleDebug = React.useCallback(() => {
-    if (viewMode === 'overlay') {
-      setViewMode('debug');
-      setStatus({ message: 'Debug mode: Click Calculate dmax to detect interference', type: 'info' });
+    setIsApplyingFix(false);
+  }, [calculateDmax, params, showDeformed, filletAdd, filletDed, smooth]);
+
+  // Check for unsaved changes before destructive actions
+  const checkUnsavedChanges = React.useCallback((action: () => void) => {
+    if (hasModifiedGeometry) {
+      setPendingAction(() => action);
+      setShowUnsavedWarning(true);
     } else {
-      setViewMode('overlay');
-      setDmaxResult(null);
-      setTrimmedTooth([]);
-      setStatus({ message: 'Returned to overlay view', type: 'info' });
+      action();
     }
-  }, [viewMode]);
+  }, [hasModifiedGeometry]);
 
-  // Build plot traces
+  // Confirm discard changes
+  const handleDiscardChanges = React.useCallback(() => {
+    setHasModifiedGeometry(false);
+    setModifiedFsPoints([]);
+    setDmaxResult(null);
+    setShowUnsavedWarning(false);
+    if (pendingAction) {
+      pendingAction();
+      setPendingAction(null);
+    }
+  }, [pendingAction]);
+
+  // Wrapped update handler that checks for unsaved changes
+  const handleUpdateWithWarning = React.useCallback(() => {
+    checkUnsavedChanges(handleUpdate);
+  }, [checkUnsavedChanges, handleUpdate]);
+
+  // Build plot traces (always overlay view)
   const traces = React.useMemo(() => {
     const plotTraces = [];
 
-    if (viewMode === 'overlay') {
-      // Full gear overlay view
-      if (fsPoints.length > 0) {
-        plotTraces.push(
-          pointsToTrace(fsPoints, 'Flexspline', PLOT_COLORS.deformed, { width: 1 })
-        );
-      }
-      if (csPoints.length > 0) {
-        plotTraces.push(
-          pointsToTrace(csPoints, 'Circular Spline', PLOT_COLORS.conjugate, { width: 1 })
-        );
-      }
-    } else {
-      // Debug single tooth view
-      if (debugFsTooth.length > 0) {
-        plotTraces.push(
-          pointsToTrace(debugFsTooth, 'FS Tooth', PLOT_COLORS.deformed, { width: 2 })
-        );
-      }
-      if (debugCsTooth.length > 0) {
-        plotTraces.push(
-          pointsToTrace(debugCsTooth, 'CS Tooth', PLOT_COLORS.conjugate, { width: 2 })
-        );
-      }
-      if (trimmedTooth.length > 0) {
-        plotTraces.push(
-          pointsToTrace(trimmedTooth, 'Trimmed FS', PLOT_COLORS.modified, { width: 2 })
-        );
-      }
+    // Show modified flexspline if available, otherwise show original
+    const displayFsPoints = hasModifiedGeometry && modifiedFsPoints.length > 0
+      ? modifiedFsPoints
+      : fsPoints;
+
+    if (displayFsPoints.length > 0) {
+      plotTraces.push(
+        pointsToTrace(
+          displayFsPoints,
+          hasModifiedGeometry ? 'Modified Flexspline' : 'Flexspline',
+          hasModifiedGeometry ? PLOT_COLORS.modified : PLOT_COLORS.deformed,
+          { width: 1 }
+        )
+      );
+    }
+    if (csPoints.length > 0) {
+      plotTraces.push(
+        pointsToTrace(csPoints, 'Circular Spline', PLOT_COLORS.conjugate, { width: 1 })
+      );
     }
 
     return plotTraces;
-  }, [viewMode, fsPoints, csPoints, debugFsTooth, debugCsTooth, trimmedTooth]);
+  }, [fsPoints, csPoints, hasModifiedGeometry, modifiedFsPoints]);
 
   // Export points
   const exportPoints = React.useMemo(() => {
-    if (appliedDmax && fsPoints.length > 0) {
-      return fsPoints;
+    if (hasModifiedGeometry && modifiedFsPoints.length > 0) {
+      return modifiedFsPoints;
     }
     return fsPoints;
-  }, [fsPoints, appliedDmax]);
+  }, [fsPoints, hasModifiedGeometry, modifiedFsPoints]);
 
   return (
     <div className="flex flex-col lg:flex-row gap-2 h-full min-h-0">
@@ -388,21 +420,21 @@ export function TabRadialModification() {
           <div className="panel-body">
             <ParameterPanel
               includeFillets
-              onUpdate={handleUpdate}
+              onUpdate={handleUpdateWithWarning}
             />
           </div>
         </div>
 
         <div className="panel">
           <div className="panel-header">View Controls</div>
-          <div className="panel-body space-y-2">
+          <div className="panel-body">
             <div className="flex gap-2 items-center">
               <div className="flex items-center gap-2 flex-1">
                 <span className={`text-xs font-medium transition-colors ${!showDeformed ? 'text-green-700' : 'text-surface-500'}`}>
                   Undeformed
                 </span>
                 <button
-                  onClick={() => setShowDeformed(!showDeformed)}
+                  onClick={() => checkUnsavedChanges(() => setShowDeformed(!showDeformed))}
                   className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
                     showDeformed ? 'bg-red-500' : 'bg-green-600'
                   }`}
@@ -418,49 +450,15 @@ export function TabRadialModification() {
                 </span>
               </div>
               <Button
-                variant={viewMode === 'debug' ? 'primary' : 'secondary'}
+                variant="secondary"
                 size="sm"
-                onClick={handleToggleDebug}
+                onClick={() => setShowOverlapConfirm(true)}
                 className="flex-1"
+                disabled={debugFsTooth.length === 0 || debugCsTooth.length === 0}
               >
-                {viewMode === 'debug' ? 'Full Gears' : 'Debug Tooth'}
+                Overlap Fix
               </Button>
             </div>
-
-            {viewMode === 'debug' && (
-              <div className="space-y-2 pt-2 border-t border-surface-400">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleCalculateDmax}
-                  disabled={debugFsTooth.length === 0 || debugCsTooth.length === 0}
-                  className="w-full"
-                >
-                  Calculate dmax
-                </Button>
-
-                {dmaxResult && (
-                  <div className="bg-surface-100 rounded p-2 text-xs space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-surface-600">dmax_x:</span>
-                      <span className="font-mono">{dmaxResult.dmax_x.toFixed(3)} mm</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-surface-600">dmax_y:</span>
-                      <span className="font-mono">{dmaxResult.dmax_y.toFixed(3)} mm</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-surface-600">X interference pts:</span>
-                      <span className="font-mono">{dmaxResult.x_interference_pts}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-surface-600">Y interference pts:</span>
-                      <span className="font-mono">{dmaxResult.y_interference_pts}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
@@ -483,22 +481,84 @@ export function TabRadialModification() {
       </div>
 
       {/* Right Panel - Plot */}
-      <div className="flex-1 min-h-[300px] lg:min-h-0">
+      <div className="flex-1 min-h-[300px] lg:min-h-0 relative">
         <PlotView
           traces={traces}
-          title={viewMode === 'overlay' ? 'Gear Overlay' : 'Single Tooth Debug'}
+          title={hasModifiedGeometry ? "Modified Gear Overlay" : "Gear Overlay"}
           xAxisLabel="X (mm)"
           yAxisLabel="Y (mm)"
           className="h-full"
         />
+
+        {/* Loading overlay during fix application */}
+        {isApplyingFix && (
+          <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+            <div className="text-center">
+              <div className="inline-block w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-2" />
+              <p className="text-sm font-medium text-surface-700">Subtracting overlap values...</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <ExportDialog
         points={exportPoints}
-        defaultFilename="flexspline_radial_mod"
+        defaultFilename={hasModifiedGeometry ? "flexspline_modified" : "flexspline_radial_mod"}
         isOpen={showExport}
         onClose={() => setShowExport(false)}
       />
+
+      {/* Overlap Fix Confirmation Dialog */}
+      {showOverlapConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-surface-100 border border-surface-400 rounded w-full max-w-md p-4 shadow-xl">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-surface-700 mb-3">Overlap Fix</h2>
+            <p className="text-sm text-surface-600 mb-4">
+              There is a modification process available for flexspline and circular spline overlap.
+              This will calculate interference values and adjust your flexspline geometry to reduce
+              the risk of gear locking.
+            </p>
+            <p className="text-sm text-surface-700 font-medium mb-4">Would you like to run it?</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setShowOverlapConfirm(false)}>
+                No
+              </Button>
+              <Button variant="primary" size="sm" onClick={handleApplyOverlapFix}>
+                Yes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unsaved Changes Warning Dialog */}
+      {showUnsavedWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-surface-100 border border-surface-400 rounded w-full max-w-md p-4 shadow-xl">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-red-600 mb-3">Unsaved Changes</h2>
+            <p className="text-sm text-surface-600 mb-4">
+              You have modified flexspline geometry that will be lost if you continue.
+              We recommend exporting your changes first to save them.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setShowUnsavedWarning(false)}>
+                Cancel
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setShowExport(true)}>
+                Export First
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleDiscardChanges}
+                className="bg-red-500 hover:bg-red-600"
+              >
+                Discard Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
