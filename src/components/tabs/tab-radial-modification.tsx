@@ -9,6 +9,8 @@ import {
   buildDeformedFlexspline,
   buildFullFlexspline,
   buildFullCircularSpline,
+  buildDmaxFullFlexspline,
+  buildDmaxDeformedFlexspline,
   computeConjugateProfile,
   smoothConjugateProfile,
   computeProfile,
@@ -45,6 +47,7 @@ export function TabRadialModification() {
   const [isApplyingFix, setIsApplyingFix] = React.useState(false);
   const [hasModifiedGeometry, setHasModifiedGeometry] = React.useState(false);
   const [modifiedFsPoints, setModifiedFsPoints] = React.useState<PointTuple[]>([]);
+  const [modifiedParams, setModifiedParams] = React.useState<GearParams | null>(null);
   const [isComputing, setIsComputing] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
 
@@ -75,9 +78,9 @@ export function TabRadialModification() {
   // Build circular spline from smoothed flank (uses shared function matching Python GUI)
   const buildCircularSplineLocal = React.useCallback((flank: PointTuple[], rp_c: number): PointTuple[] => {
     if (flank.length === 0) return [];
-    const result = buildFullCircularSpline(params, flank, rp_c, 100, 0.2, 0.2);
+    const result = buildFullCircularSpline(params, flank, rp_c, 100, filletAdd, filletDed);
     return result.chain_xy;
-  }, [params]);
+  }, [params, filletAdd, filletDed]);
 
   // Build single tooth for debug mode (at phi=0)
   const buildDebugTooth = React.useCallback((params: GearParams, profile: ProfileResult): {
@@ -319,23 +322,22 @@ export function TabRadialModification() {
     if (result) {
       setDmaxResult(result);
 
-      // Build modified flexspline with trimmed tooth profile
-      // Apply dmax_x to reduce tooth width and dmax_y to reduce addendum
-      const modParams = {
-        ...params,
-        // Reduce addendum by dmax_y
-        ha: Math.max(0.1, params.ha - result.dmax_y),
-      };
+      // Store dmax values for rebuilding on toggle
+      const dmaxX = result.dmax_x;
+      const dmaxY = result.dmax_y;
 
+      // Build flexspline with dmax applied at the profile level (matching Python implementation)
       const modifiedFs = showDeformed
-        ? buildDeformedFlexspline(modParams, 39, filletAdd, filletDed, smooth)
-        : buildFullFlexspline(modParams, 39, filletAdd, filletDed, smooth);
+        ? buildDmaxDeformedFlexspline(params, dmaxX, dmaxY, 39, filletAdd, filletDed, smooth)
+        : buildDmaxFullFlexspline(params, dmaxX, dmaxY, 39, filletAdd, filletDed, smooth);
 
       if (!modifiedFs.error && modifiedFs.chain_xy.length > 0) {
         setModifiedFsPoints(modifiedFs.chain_xy);
+        setModifiedParams(params); // Store original params for toggle rebuild
+        setAppliedDmax({ x: dmaxX, y: dmaxY }); // Store dmax for toggle rebuild
         setHasModifiedGeometry(true);
         setStatus({
-          message: `Overlap fix applied: dmax_x=${result.dmax_x.toFixed(3)}mm, dmax_y=${result.dmax_y.toFixed(3)}mm`,
+          message: `Overlap fix applied: dmax_x=${dmaxX.toFixed(4)}mm, dmax_y=${dmaxY.toFixed(4)}mm`,
           type: 'success',
         });
       } else {
@@ -362,6 +364,8 @@ export function TabRadialModification() {
   const handleDiscardChanges = React.useCallback(() => {
     setHasModifiedGeometry(false);
     setModifiedFsPoints([]);
+    setModifiedParams(null);
+    setAppliedDmax(null);
     setDmaxResult(null);
     setShowUnsavedWarning(false);
     if (pendingAction) {
@@ -374,6 +378,23 @@ export function TabRadialModification() {
   const handleUpdateWithWarning = React.useCallback(() => {
     checkUnsavedChanges(handleUpdate);
   }, [checkUnsavedChanges, handleUpdate]);
+
+  // Handle deformed toggle - rebuild modified geometry if we have it
+  const handleToggleDeformed = React.useCallback(() => {
+    const newShowDeformed = !showDeformed;
+    setShowDeformed(newShowDeformed);
+
+    // If we have modified geometry with applied dmax, rebuild with new deformation state
+    if (modifiedParams && appliedDmax) {
+      const modifiedFs = newShowDeformed
+        ? buildDmaxDeformedFlexspline(modifiedParams, appliedDmax.x, appliedDmax.y, 39, filletAdd, filletDed, smooth)
+        : buildDmaxFullFlexspline(modifiedParams, appliedDmax.x, appliedDmax.y, 39, filletAdd, filletDed, smooth);
+
+      if (!modifiedFs.error && modifiedFs.chain_xy.length > 0) {
+        setModifiedFsPoints(modifiedFs.chain_xy);
+      }
+    }
+  }, [showDeformed, modifiedParams, appliedDmax, filletAdd, filletDed, smooth]);
 
   // Build plot traces (always overlay view)
   const traces = React.useMemo(() => {
@@ -434,7 +455,7 @@ export function TabRadialModification() {
                   Undeformed
                 </span>
                 <button
-                  onClick={() => checkUnsavedChanges(() => setShowDeformed(!showDeformed))}
+                  onClick={handleToggleDeformed}
                   className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
                     showDeformed ? 'bg-red-500' : 'bg-green-600'
                   }`}

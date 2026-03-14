@@ -51,4 +51,6 @@ export {
   buildFullFlexspline,
   buildDeformedFlexspline,
   buildFullCircularSpline,
+  buildDmaxFullFlexspline,
+  buildDmaxDeformedFlexspline,
 } from './gear-builder';

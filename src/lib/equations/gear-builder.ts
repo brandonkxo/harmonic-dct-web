@@ -10,6 +10,20 @@ import { eq29Transform } from './transforms';
 import { smoothBranch } from './smoothing';
 
 /**
+ * Apply dmax_x to profile points - shifts flanks inward to reduce tooth thickness.
+ * Right side (x > 0): x_new = x - dmax_x
+ * Left side (x < 0): x_new = x + dmax_x
+ */
+function applyDmaxX(pts: PointTuple[], dmax_x: number): PointTuple[] {
+  if (dmax_x <= 0) return [...pts];
+  return pts.map(([x, y]): PointTuple => {
+    if (x > 0) return [x - dmax_x, y];
+    if (x < 0) return [x + dmax_x, y];
+    return [x, y];
+  });
+}
+
+/**
  * Build the complete outline of one flexspline tooth placed on the
  * pitch circle, including reference geometry.
  */
@@ -910,5 +924,500 @@ export function buildFullCircularSpline(
     ha,
     hf,
     z_c,
+  };
+}
+
+/**
+ * Build full flexspline with dmax_x and dmax_y applied.
+ * Matches Python build_dmax_deformed_flexspline exactly.
+ * dmax_x: shifts tooth flanks inward (reduces tooth thickness)
+ * dmax_y: lowers addendum (reduces tooth height)
+ */
+export function buildDmaxFullFlexspline(
+  params: GearParams,
+  dmax_x: number,
+  dmax_y: number,
+  n_ded_arc: number = 39,
+  r_fillet_add: number = 0.2,
+  r_fillet_ded: number | null = null,
+  smooth: number = 0.0
+): FullGearResult {
+  const result = computeProfile(params);
+  if (result.error) {
+    return { error: result.error } as FullGearResult;
+  }
+
+  const { m, ha, hf } = params;
+  const z_f = Math.floor(params.z_f);
+  const rp = m * z_f / 2.0;
+  const ds = result.ds;
+  const rm = result.rm;
+  const { x1_R, y1_R, r1, x2_R, y2_R, r2 } = result;
+
+  if (r_fillet_ded === null) r_fillet_ded = r_fillet_add;
+
+  // Apply dmax_x to all profile segments
+  const pts_AB = applyDmaxX(result.pts_AB, dmax_x);
+  const pts_BC = applyDmaxX(result.pts_BC, dmax_x);
+  const pts_CD = applyDmaxX(result.pts_CD, dmax_x);
+
+  // Adjust circle centers for dmax_x
+  const x1_R_mod = dmax_x > 0 ? x1_R - dmax_x : x1_R;
+  const x2_R_mod = dmax_x > 0 ? x2_R - dmax_x : x2_R;
+
+  // Addendum height - LOWERED by dmax_y
+  const y_add = ds + hf + ha - dmax_y;
+  const y_ded = ds;
+
+  // ===== ADDENDUM FILLET (with dmax_y) =====
+  const cy_fillet = y_add - r_fillet_add;
+  const dy = cy_fillet - y1_R;
+  const r_inner = r1 - r_fillet_add;
+  let dx_sq = r_inner * r_inner - dy * dy;
+  if (dx_sq < 0) dx_sq = 0;
+  const cx_fillet = x1_R_mod + Math.sqrt(dx_sq);
+
+  // Tangent point on AB arc
+  const dist_to_fillet = Math.sqrt((cx_fillet - x1_R_mod) ** 2 + (cy_fillet - y1_R) ** 2);
+  let dir_x: number, dir_y: number;
+  if (dist_to_fillet > 1e-9) {
+    dir_x = (cx_fillet - x1_R_mod) / dist_to_fillet;
+    dir_y = (cy_fillet - y1_R) / dist_to_fillet;
+  } else {
+    dir_x = 1;
+    dir_y = 0;
+  }
+  const pt_AB_trim: PointTuple = [x1_R_mod + r1 * dir_x, y1_R + r1 * dir_y];
+  const pt_add_trim_r: PointTuple = [cx_fillet, y_add];
+
+  // Generate addendum fillet arc
+  const n_fillet = 12;
+  const theta_add_start = Math.atan2(pt_AB_trim[1] - cy_fillet, pt_AB_trim[0] - cx_fillet);
+  const theta_add_end = Math.atan2(pt_add_trim_r[1] - cy_fillet, pt_add_trim_r[0] - cx_fillet);
+  let d_theta_add = theta_add_end - theta_add_start;
+  if (d_theta_add > Math.PI) d_theta_add -= 2 * Math.PI;
+  else if (d_theta_add < -Math.PI) d_theta_add += 2 * Math.PI;
+
+  const fillet_right: PointTuple[] = [];
+  for (let i = 0; i <= n_fillet; i++) {
+    const frac = i / n_fillet;
+    const theta = theta_add_start + frac * d_theta_add;
+    fillet_right.push([cx_fillet + r_fillet_add * Math.cos(theta), cy_fillet + r_fillet_add * Math.sin(theta)]);
+  }
+  const fillet_left: PointTuple[] = fillet_right.map(([x, y]): PointTuple => [-x, y]);
+  const pt_add_trim_l: PointTuple = [-pt_add_trim_r[0], pt_add_trim_r[1]];
+
+  // Trim AB points
+  const angle_trim = Math.atan2(pt_AB_trim[1] - y1_R, pt_AB_trim[0] - x1_R_mod);
+  const pts_AB_trimmed: PointTuple[] = [];
+  for (const pt of pts_AB) {
+    const angle_pt = Math.atan2(pt[1] - y1_R, pt[0] - x1_R_mod);
+    if (angle_pt <= angle_trim + 1e-9) {
+      pts_AB_trimmed.push(pt);
+    }
+  }
+  if (pts_AB_trimmed.length > 0) {
+    const first_pt = pts_AB_trimmed[0];
+    const dist = Math.sqrt((first_pt[0] - pt_AB_trim[0]) ** 2 + (first_pt[1] - pt_AB_trim[1]) ** 2);
+    if (dist > 1e-6) {
+      pts_AB_trimmed.unshift(pt_AB_trim);
+    }
+  } else {
+    pts_AB_trimmed.push(pt_AB_trim);
+  }
+
+  // ===== DEDENDUM FILLET (with dmax_x) =====
+  const cy_root = y_ded + r_fillet_ded;
+  const dy_root = cy_root - y2_R;
+  const r_inner_root = Math.max(r2 - r_fillet_ded, 0);
+  let dx_root_sq = r_inner_root * r_inner_root - dy_root * dy_root;
+  if (dx_root_sq < 0) dx_root_sq = 0;
+  const cx_root = x2_R_mod - Math.sqrt(dx_root_sq);
+
+  // Tangent point on CD arc
+  const dist_to_root = Math.sqrt((cx_root - x2_R_mod) ** 2 + (cy_root - y2_R) ** 2);
+  let dir_x_root: number, dir_y_root: number;
+  if (dist_to_root > 1e-9) {
+    dir_x_root = (cx_root - x2_R_mod) / dist_to_root;
+    dir_y_root = (cy_root - y2_R) / dist_to_root;
+  } else {
+    dir_x_root = 1;
+    dir_y_root = 0;
+  }
+  const pt_CD_trim: PointTuple = [x2_R_mod + r2 * dir_x_root, y2_R + r2 * dir_y_root];
+  const pt_ded_trim_r: PointTuple = [cx_root, y_ded];
+  const pt_ded_trim_l: PointTuple = [-pt_ded_trim_r[0], pt_ded_trim_r[1]];
+
+  // Generate dedendum fillet arc
+  const theta_root_start = Math.atan2(pt_CD_trim[1] - cy_root, pt_CD_trim[0] - cx_root);
+  const theta_root_end = Math.atan2(pt_ded_trim_r[1] - cy_root, pt_ded_trim_r[0] - cx_root);
+  let d_theta_root = theta_root_end - theta_root_start;
+  if (d_theta_root > Math.PI) d_theta_root -= 2 * Math.PI;
+  else if (d_theta_root < -Math.PI) d_theta_root += 2 * Math.PI;
+
+  const fillet_root_right: PointTuple[] = [];
+  for (let i = 0; i <= n_fillet; i++) {
+    const frac = i / n_fillet;
+    const theta = theta_root_start + frac * d_theta_root;
+    fillet_root_right.push([cx_root + r_fillet_ded * Math.cos(theta), cy_root + r_fillet_ded * Math.sin(theta)]);
+  }
+  const fillet_root_left: PointTuple[] = fillet_root_right.slice().reverse().map(([x, y]): PointTuple => [-x, y]);
+
+  // Trim CD points
+  const angle_cd_trim = Math.atan2(pt_CD_trim[1] - y2_R, pt_CD_trim[0] - x2_R_mod);
+  const pts_CD_trimmed: PointTuple[] = [];
+  for (const pt of pts_CD) {
+    const angle_pt = Math.atan2(pt[1] - y2_R, pt[0] - x2_R_mod);
+    if (angle_pt <= angle_cd_trim + 1e-9) {
+      pts_CD_trimmed.push(pt);
+    }
+  }
+  if (pts_CD_trimmed.length > 0) {
+    const last_pt = pts_CD_trimmed[pts_CD_trimmed.length - 1];
+    const dist = Math.sqrt((last_pt[0] - pt_CD_trim[0]) ** 2 + (last_pt[1] - pt_CD_trim[1]) ** 2);
+    if (dist > 1e-6) {
+      pts_CD_trimmed.push(pt_CD_trim);
+    }
+  } else {
+    pts_CD_trimmed.push(pt_CD_trim);
+  }
+
+  // Build flank
+  let rightFlank: PointTuple[] = [...pts_AB_trimmed, ...pts_BC, ...pts_CD_trimmed];
+
+  if (smooth > 0) {
+    rightFlank.sort((a, b) => b[1] - a[1]);
+    rightFlank = smoothBranch(rightFlank, smooth, 200);
+  }
+
+  const leftFlank: PointTuple[] = rightFlank.slice().reverse().map(([x, y]): PointTuple => [-x, y]);
+
+  // Dedendum radius
+  const r_ded = rm + ds;
+
+  // Angular pitch
+  const pitch_angle = (2.0 * Math.PI) / z_f;
+
+  // Angular positions of dedendum trim points
+  const theta_D = pt_ded_trim_r[0] / rp;
+  const theta_Dp = pt_ded_trim_l[0] / rp;
+
+  function localToPolar(x_loc: number, y_loc: number, tooth_offset_angle: number): PointTuple {
+    const r = rm + y_loc;
+    const theta = x_loc / rp + tooth_offset_angle;
+    return [r * Math.sin(theta), r * Math.cos(theta)];
+  }
+
+  const chainXy: PointTuple[] = [];
+
+  for (let i = 0; i < z_f; i++) {
+    const angle_i = i * pitch_angle;
+
+    // Left root fillet
+    for (const [x_loc, y_loc] of fillet_root_left) {
+      chainXy.push(localToPolar(x_loc, y_loc, angle_i));
+    }
+
+    // Left flank
+    for (const [x_loc, y_loc] of leftFlank) {
+      chainXy.push(localToPolar(x_loc, y_loc, angle_i));
+    }
+
+    // Left fillet
+    for (const [x_loc, y_loc] of fillet_left) {
+      chainXy.push(localToPolar(x_loc, y_loc, angle_i));
+    }
+
+    // Addendum line
+    for (let j = 1; j < n_ded_arc; j++) {
+      const frac = j / n_ded_arc;
+      const x_loc = pt_add_trim_l[0] + frac * (pt_add_trim_r[0] - pt_add_trim_l[0]);
+      const y_loc = pt_add_trim_l[1] + frac * (pt_add_trim_r[1] - pt_add_trim_l[1]);
+      chainXy.push(localToPolar(x_loc, y_loc, angle_i));
+    }
+
+    // Right fillet (reversed)
+    for (let k = fillet_right.length - 1; k >= 0; k--) {
+      chainXy.push(localToPolar(fillet_right[k][0], fillet_right[k][1], angle_i));
+    }
+
+    // Right flank
+    for (const [x_loc, y_loc] of rightFlank) {
+      chainXy.push(localToPolar(x_loc, y_loc, angle_i));
+    }
+
+    // Right root fillet
+    for (const [x_loc, y_loc] of fillet_root_right) {
+      chainXy.push(localToPolar(x_loc, y_loc, angle_i));
+    }
+
+    // Dedendum arc to next tooth
+    const next_i = (i + 1) % z_f;
+    const angle_next = next_i * pitch_angle;
+    let theta_start = theta_D + angle_i;
+    let theta_end = theta_Dp + angle_next;
+
+    if (theta_end < theta_start) {
+      theta_end += 2.0 * Math.PI;
+    }
+
+    for (let j = 1; j <= n_ded_arc; j++) {
+      const frac = j / n_ded_arc;
+      const th = theta_start + frac * (theta_end - theta_start);
+      chainXy.push([r_ded * Math.sin(th), r_ded * Math.cos(th)]);
+    }
+  }
+
+  return {
+    chain_xy: chainXy,
+    rp,
+    rm,
+    ds,
+    s: result.s,
+    t: result.t,
+    ha: ha - dmax_y,
+    hf,
+    z_f,
+  };
+}
+
+/**
+ * Build deformed flexspline with dmax_x and dmax_y applied.
+ * Matches Python build_dmax_deformed_flexspline exactly.
+ */
+export function buildDmaxDeformedFlexspline(
+  params: GearParams,
+  dmax_x: number,
+  dmax_y: number,
+  n_ded_arc: number = 39,
+  r_fillet_add: number = 0.2,
+  r_fillet_ded: number | null = null,
+  smooth: number = 0.0
+): FullGearResult {
+  const result = computeProfile(params);
+  if (result.error) {
+    return { error: result.error } as FullGearResult;
+  }
+
+  const { m, w0, ha, hf } = params;
+  const z_f = Math.floor(params.z_f);
+  const rp = m * z_f / 2.0;
+  const rm = result.rm;
+  const ds = result.ds;
+  const { x1_R, y1_R, r1, x2_R, y2_R, r2 } = result;
+
+  if (r_fillet_ded === null) r_fillet_ded = r_fillet_add;
+
+  // Apply dmax_x to all profile segments
+  const pts_AB = applyDmaxX(result.pts_AB, dmax_x);
+  const pts_BC = applyDmaxX(result.pts_BC, dmax_x);
+  const pts_CD = applyDmaxX(result.pts_CD, dmax_x);
+
+  // Adjust circle centers for dmax_x
+  const x1_R_mod = dmax_x > 0 ? x1_R - dmax_x : x1_R;
+  const x2_R_mod = dmax_x > 0 ? x2_R - dmax_x : x2_R;
+
+  // Addendum height - LOWERED by dmax_y
+  const y_add = ds + hf + ha - dmax_y;
+  const y_ded = ds;
+
+  // ===== ADDENDUM FILLET (with dmax_y) =====
+  const cy_fillet = y_add - r_fillet_add;
+  const dy = cy_fillet - y1_R;
+  const r_inner = r1 - r_fillet_add;
+  let dx_sq = r_inner * r_inner - dy * dy;
+  if (dx_sq < 0) dx_sq = 0;
+  const cx_fillet = x1_R_mod + Math.sqrt(dx_sq);
+
+  const dist_to_fillet = Math.sqrt((cx_fillet - x1_R_mod) ** 2 + (cy_fillet - y1_R) ** 2);
+  let dir_x: number, dir_y: number;
+  if (dist_to_fillet > 1e-9) {
+    dir_x = (cx_fillet - x1_R_mod) / dist_to_fillet;
+    dir_y = (cy_fillet - y1_R) / dist_to_fillet;
+  } else {
+    dir_x = 1;
+    dir_y = 0;
+  }
+  const pt_AB_trim: PointTuple = [x1_R_mod + r1 * dir_x, y1_R + r1 * dir_y];
+  const pt_add_trim_r: PointTuple = [cx_fillet, y_add];
+
+  const n_fillet = 12;
+  const theta_add_start = Math.atan2(pt_AB_trim[1] - cy_fillet, pt_AB_trim[0] - cx_fillet);
+  const theta_add_end = Math.atan2(pt_add_trim_r[1] - cy_fillet, pt_add_trim_r[0] - cx_fillet);
+  let d_theta_add = theta_add_end - theta_add_start;
+  if (d_theta_add > Math.PI) d_theta_add -= 2 * Math.PI;
+  else if (d_theta_add < -Math.PI) d_theta_add += 2 * Math.PI;
+
+  const fillet_right: PointTuple[] = [];
+  for (let i = 0; i <= n_fillet; i++) {
+    const frac = i / n_fillet;
+    const theta = theta_add_start + frac * d_theta_add;
+    fillet_right.push([cx_fillet + r_fillet_add * Math.cos(theta), cy_fillet + r_fillet_add * Math.sin(theta)]);
+  }
+  const fillet_left: PointTuple[] = fillet_right.map(([x, y]): PointTuple => [-x, y]);
+  const pt_add_trim_l: PointTuple = [-pt_add_trim_r[0], pt_add_trim_r[1]];
+
+  // Trim AB points
+  const angle_trim = Math.atan2(pt_AB_trim[1] - y1_R, pt_AB_trim[0] - x1_R_mod);
+  const pts_AB_trimmed: PointTuple[] = [];
+  for (const pt of pts_AB) {
+    const angle_pt = Math.atan2(pt[1] - y1_R, pt[0] - x1_R_mod);
+    if (angle_pt <= angle_trim + 1e-9) {
+      pts_AB_trimmed.push(pt);
+    }
+  }
+  if (pts_AB_trimmed.length > 0) {
+    const first_pt = pts_AB_trimmed[0];
+    const dist = Math.sqrt((first_pt[0] - pt_AB_trim[0]) ** 2 + (first_pt[1] - pt_AB_trim[1]) ** 2);
+    if (dist > 1e-6) {
+      pts_AB_trimmed.unshift(pt_AB_trim);
+    }
+  } else {
+    pts_AB_trimmed.push(pt_AB_trim);
+  }
+
+  // ===== DEDENDUM FILLET (with dmax_x) =====
+  const cy_root = y_ded + r_fillet_ded;
+  const dy_root = cy_root - y2_R;
+  const r_inner_root = Math.max(r2 - r_fillet_ded, 0);
+  let dx_root_sq = r_inner_root * r_inner_root - dy_root * dy_root;
+  if (dx_root_sq < 0) dx_root_sq = 0;
+  const cx_root = x2_R_mod - Math.sqrt(dx_root_sq);
+
+  const dist_to_root = Math.sqrt((cx_root - x2_R_mod) ** 2 + (cy_root - y2_R) ** 2);
+  let dir_x_root: number, dir_y_root: number;
+  if (dist_to_root > 1e-9) {
+    dir_x_root = (cx_root - x2_R_mod) / dist_to_root;
+    dir_y_root = (cy_root - y2_R) / dist_to_root;
+  } else {
+    dir_x_root = 1;
+    dir_y_root = 0;
+  }
+  const pt_CD_trim: PointTuple = [x2_R_mod + r2 * dir_x_root, y2_R + r2 * dir_y_root];
+  const pt_ded_trim_r: PointTuple = [cx_root, y_ded];
+  const pt_ded_trim_l: PointTuple = [-pt_ded_trim_r[0], pt_ded_trim_r[1]];
+
+  const theta_root_start = Math.atan2(pt_CD_trim[1] - cy_root, pt_CD_trim[0] - cx_root);
+  const theta_root_end = Math.atan2(pt_ded_trim_r[1] - cy_root, pt_ded_trim_r[0] - cx_root);
+  let d_theta_root = theta_root_end - theta_root_start;
+  if (d_theta_root > Math.PI) d_theta_root -= 2 * Math.PI;
+  else if (d_theta_root < -Math.PI) d_theta_root += 2 * Math.PI;
+
+  const fillet_root_right: PointTuple[] = [];
+  for (let i = 0; i <= n_fillet; i++) {
+    const frac = i / n_fillet;
+    const theta = theta_root_start + frac * d_theta_root;
+    fillet_root_right.push([cx_root + r_fillet_ded * Math.cos(theta), cy_root + r_fillet_ded * Math.sin(theta)]);
+  }
+  const fillet_root_left: PointTuple[] = fillet_root_right.slice().reverse().map(([x, y]): PointTuple => [-x, y]);
+
+  // Trim CD points
+  const angle_cd_trim = Math.atan2(pt_CD_trim[1] - y2_R, pt_CD_trim[0] - x2_R_mod);
+  const pts_CD_trimmed: PointTuple[] = [];
+  for (const pt of pts_CD) {
+    const angle_pt = Math.atan2(pt[1] - y2_R, pt[0] - x2_R_mod);
+    if (angle_pt <= angle_cd_trim + 1e-9) {
+      pts_CD_trimmed.push(pt);
+    }
+  }
+  if (pts_CD_trimmed.length > 0) {
+    const last_pt = pts_CD_trimmed[pts_CD_trimmed.length - 1];
+    const dist = Math.sqrt((last_pt[0] - pt_CD_trim[0]) ** 2 + (last_pt[1] - pt_CD_trim[1]) ** 2);
+    if (dist > 1e-6) {
+      pts_CD_trimmed.push(pt_CD_trim);
+    }
+  } else {
+    pts_CD_trimmed.push(pt_CD_trim);
+  }
+
+  // Build flank
+  let rightFlank: PointTuple[] = [...pts_AB_trimmed, ...pts_BC, ...pts_CD_trimmed];
+
+  if (smooth > 0) {
+    rightFlank.sort((a, b) => b[1] - a[1]);
+    rightFlank = smoothBranch(rightFlank, smooth, 200);
+  }
+
+  const leftFlank: PointTuple[] = rightFlank.slice().reverse().map(([x, y]): PointTuple => [-x, y]);
+
+  const pitch_angle = (2.0 * Math.PI) / z_f;
+
+  function toothPointGlobal(xr: number, yr: number, phi: number): PointTuple {
+    const rho = eq14Rho(phi, rm, w0);
+    const mu = eq21Mu(phi, w0, rm);
+    const phi1 = eq23Phi1(phi, w0, rm);
+    const gamma = phi1;
+    const psi = eq27Psi(mu, gamma);
+    return eq29Transform(xr, yr, psi, rho, gamma);
+  }
+
+  const chainXy: PointTuple[] = [];
+
+  for (let i = 0; i < z_f; i++) {
+    const phi = i * pitch_angle;
+    const next_i = (i + 1) % z_f;
+    const phi_next = next_i * pitch_angle;
+
+    // Left root fillet
+    for (const [x_loc, y_loc] of fillet_root_left) {
+      chainXy.push(toothPointGlobal(x_loc, y_loc, phi));
+    }
+
+    // Left flank
+    for (const [xr, yr] of leftFlank) {
+      chainXy.push(toothPointGlobal(xr, yr, phi));
+    }
+
+    // Left fillet
+    for (const [x_loc, y_loc] of fillet_left) {
+      chainXy.push(toothPointGlobal(x_loc, y_loc, phi));
+    }
+
+    // Addendum line
+    for (let j = 1; j < n_ded_arc; j++) {
+      const frac = j / n_ded_arc;
+      const x_loc = pt_add_trim_l[0] + frac * (pt_add_trim_r[0] - pt_add_trim_l[0]);
+      const y_loc = pt_add_trim_l[1] + frac * (pt_add_trim_r[1] - pt_add_trim_l[1]);
+      chainXy.push(toothPointGlobal(x_loc, y_loc, phi));
+    }
+
+    // Right fillet (reversed)
+    for (let k = fillet_right.length - 1; k >= 0; k--) {
+      chainXy.push(toothPointGlobal(fillet_right[k][0], fillet_right[k][1], phi));
+    }
+
+    // Right flank
+    for (const [xr, yr] of rightFlank) {
+      chainXy.push(toothPointGlobal(xr, yr, phi));
+    }
+
+    // Right root fillet
+    for (const [x_loc, y_loc] of fillet_root_right) {
+      chainXy.push(toothPointGlobal(x_loc, y_loc, phi));
+    }
+
+    // Dedendum arc
+    const [xD, yD] = toothPointGlobal(pt_ded_trim_r[0], pt_ded_trim_r[1], phi);
+    const [xDp, yDp] = toothPointGlobal(pt_ded_trim_l[0], pt_ded_trim_l[1], phi_next);
+
+    for (let j = 1; j <= n_ded_arc; j++) {
+      const frac = j / n_ded_arc;
+      const x_arc = xD + frac * (xDp - xD);
+      const y_arc = yD + frac * (yDp - yD);
+      chainXy.push([x_arc, y_arc]);
+    }
+  }
+
+  return {
+    chain_xy: chainXy,
+    rp,
+    rm,
+    w0,
+    ds,
+    s: result.s,
+    t: result.t,
+    ha: ha - dmax_y,
+    hf,
+    z_f,
   };
 }
