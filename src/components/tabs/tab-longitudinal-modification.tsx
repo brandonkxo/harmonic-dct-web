@@ -74,7 +74,7 @@ export function TabLongitudinalModification() {
     setSections(newSections);
     setError(null);
     setStatus({
-      message: `Built ${newSections.length} axial sections over ${l0.toFixed(1)} mm length`,
+      message: `Built ${newSections.length} axial sections over ${l0.toFixed(1)} length`,
       type: 'success',
     });
   }, [params, smooth, filletAdd, filletDed, l0, li, nSections, setError]);
@@ -97,7 +97,7 @@ export function TabLongitudinalModification() {
       plotTraces.push(
         pointsToTrace(
           section.points,
-          `z = ${section.z.toFixed(1)} mm`,
+          `z = ${section.z.toFixed(1)}`,
           color,
           { width: 1 }
         )
@@ -194,7 +194,6 @@ export function TabLongitudinalModification() {
                 step={0.001}
                 min={1}
                 className="w-24"
-                suffix="mm"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -207,7 +206,6 @@ export function TabLongitudinalModification() {
                 min={0}
                 max={l0}
                 className="w-24"
-                suffix="mm"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -244,8 +242,8 @@ export function TabLongitudinalModification() {
           <PlotView
             traces={traces}
             title="Cross-Sections at Different Axial Positions"
-            xAxisLabel="X (mm)"
-            yAxisLabel="Y (mm)"
+            xAxisLabel="X"
+            yAxisLabel="Y"
             className="h-full"
           />
         </div>
@@ -255,7 +253,7 @@ export function TabLongitudinalModification() {
           <PlotView
             traces={sideViewTraces}
             title="Longitudinal Modification Profile"
-            xAxisLabel="Axial Position Z (mm)"
+            xAxisLabel="Axial Position Z"
             yAxisLabel="Modification (%)"
             equalAspect={false}
             className="h-full"
