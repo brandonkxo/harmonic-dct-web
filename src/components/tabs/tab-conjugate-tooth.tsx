@@ -135,7 +135,7 @@ export function TabConjugateTooth() {
   }, [result, params]);
 
   // Output values
-  const outputValues = React.useMemo(() => {
+  const outputValues = React.useMemo((): Record<string, string | number> => {
     if (!result) return {};
     return {
       n_pts: result.n_pts,

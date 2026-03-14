@@ -50,4 +50,5 @@ export {
   buildSingleToothOutline,
   buildFullFlexspline,
   buildDeformedFlexspline,
+  buildFullCircularSpline,
 } from './gear-builder';

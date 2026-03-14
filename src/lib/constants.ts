@@ -81,7 +81,7 @@ export const PARAM_GROUPS: Record<string, (keyof GearParams)[]> = {
 };
 
 // Integer parameters that should use whole numbers
-export const INTEGER_PARAMS: Set<keyof GearParams> = new Set(['z_f', 'z_c']);
+export const INTEGER_PARAMS = new Set<keyof GearParams>(['z_f', 'z_c']);
 
 // Default fillet radii
 export const DEFAULT_FILLET_ADD = 0.15;

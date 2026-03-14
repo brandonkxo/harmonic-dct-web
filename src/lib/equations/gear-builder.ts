@@ -731,27 +731,61 @@ export function buildFullCircularSpline(
               fillet_right = _shortArc(th0, th1, n_fillet, cx_fillet, cy_fillet, r_fillet_add);
               fillet_left = fillet_right.map(([x, y]): PointTuple => [-x, y]);
 
-              // Trim bottom of profile using angle-based filtering (original approach)
-              const angle_cd_trim = Math.atan2(pt_CD_trim[1] - y2_R, pt_CD_trim[0] - x2_R);
-              right_flank = [];
-              for (const pt of right_flank_trimmed_top) {
-                const angle_pt = Math.atan2(pt[1] - y2_R, pt[0] - x2_R);
-                if (angle_pt <= angle_cd_trim + 1e-9) {
-                  right_flank.push(pt);
+              // Generate dedendum fillet arc using closest-approach like addendum
+              // The fillet center is at (cx_root, cy_root), dedendum point at (cx_root, y_ded)
+              // Arc needs to sweep from dedendum toward the profile (which is above and to the side)
+              const th_ded_line = Math.atan2(pt_ded_trim_r[1] - cy_root, pt_ded_trim_r[0] - cx_root);
+              // Extend arc in BOTH directions to ensure we find intersection
+              const th_ded_extend_cw = th_ded_line - Math.PI / 2;
+              const th_ded_extend_ccw = th_ded_line + Math.PI / 2;
+              const fillet_root_arc_cw = _shortArc(th_ded_line, th_ded_extend_cw, n_fillet * 2, cx_root, cy_root, r_fillet_ded);
+              const fillet_root_arc_ccw = _shortArc(th_ded_line, th_ded_extend_ccw, n_fillet * 2, cx_root, cy_root, r_fillet_ded);
+
+              // Find where dedendum fillet arc intersects/meets the profile (closest approach)
+              // Check both directions and pick the one with better intersection
+              let best_root_fillet_idx = 0;
+              let best_root_profile_idx = right_flank_trimmed_top.length - 1;
+              let best_root_dist = Infinity;
+              let use_ccw = false;
+
+              for (let fi = 0; fi < fillet_root_arc_cw.length; fi++) {
+                const fpt = fillet_root_arc_cw[fi];
+                for (let pi = 0; pi < right_flank_trimmed_top.length; pi++) {
+                  const ppt = right_flank_trimmed_top[pi];
+                  const d = Math.sqrt((fpt[0] - ppt[0]) ** 2 + (fpt[1] - ppt[1]) ** 2);
+                  if (d < best_root_dist) {
+                    best_root_dist = d;
+                    best_root_fillet_idx = fi;
+                    best_root_profile_idx = pi;
+                    use_ccw = false;
+                  }
                 }
               }
-              if (right_flank.length > 0) {
-                const last_pt = right_flank[right_flank.length - 1];
-                const dist_to_trim = Math.sqrt((last_pt[0] - pt_CD_trim[0]) ** 2 + (last_pt[1] - pt_CD_trim[1]) ** 2);
-                if (dist_to_trim > 1e-6) {
-                  right_flank.push(pt_CD_trim);
+              for (let fi = 0; fi < fillet_root_arc_ccw.length; fi++) {
+                const fpt = fillet_root_arc_ccw[fi];
+                for (let pi = 0; pi < right_flank_trimmed_top.length; pi++) {
+                  const ppt = right_flank_trimmed_top[pi];
+                  const d = Math.sqrt((fpt[0] - ppt[0]) ** 2 + (fpt[1] - ppt[1]) ** 2);
+                  if (d < best_root_dist) {
+                    best_root_dist = d;
+                    best_root_fillet_idx = fi;
+                    best_root_profile_idx = pi;
+                    use_ccw = true;
+                  }
                 }
-              } else {
-                right_flank = [...right_flank_trimmed_top];
               }
 
-              // Dedendum fillet uses the theoretical trim point (original approach)
-              const tr0 = Math.atan2(pt_CD_trim[1] - cy_root, pt_CD_trim[0] - cx_root);
+              const chosen_arc = use_ccw ? fillet_root_arc_ccw : fillet_root_arc_cw;
+
+              // Trim profile: keep points from top down to intersection
+              // Safety: ensure we keep at least half the profile
+              const min_keep = Math.max(3, Math.floor(right_flank_trimmed_top.length / 2));
+              const trim_idx = Math.max(best_root_profile_idx + 1, min_keep);
+              right_flank = right_flank_trimmed_top.slice(0, trim_idx);
+
+              // The root fillet goes from intersection point down to dedendum
+              const fillet_root_intersect_pt = chosen_arc[best_root_fillet_idx];
+              const tr0 = Math.atan2(fillet_root_intersect_pt[1] - cy_root, fillet_root_intersect_pt[0] - cx_root);
               const tr1 = Math.atan2(pt_ded_trim_r[1] - cy_root, pt_ded_trim_r[0] - cx_root);
               fillet_root_right = _shortArc(tr0, tr1, n_fillet, cx_root, cy_root, r_fillet_ded);
               fillet_root_left = fillet_root_right.slice().reverse().map(([x, y]): PointTuple => [-x, y]);
@@ -769,9 +803,6 @@ export function buildFullCircularSpline(
   // Left flank: mirror and reverse (dedendum -> addendum)
   const left_flank: PointTuple[] = right_flank.slice().reverse().map(([x, y]): PointTuple => [-x, y]);
 
-  // Dedendum radius for circular spline
-  const r_ded = rp_c + y_ded;
-
   // Angular pitch
   const pitch_angle = 2.0 * Math.PI / z_c;
 
@@ -781,9 +812,23 @@ export function buildFullCircularSpline(
     return [r * Math.sin(theta), r * Math.cos(theta)];
   }
 
-  // Angular positions of dedendum endpoints
-  const pt_D = use_fillets ? pt_ded_trim_r : right_flank[right_flank.length - 1];
-  const pt_Dp = use_fillets ? pt_ded_trim_l : left_flank[0];
+  // Use actual fillet endpoints for dedendum arc connection (fixes discontinuity)
+  // When fillets are used, the dedendum arc must connect from the actual last point
+  // of fillet_root_right to the actual first point of fillet_root_left
+  let pt_D: PointTuple;
+  let pt_Dp: PointTuple;
+
+  if (use_fillets && fillet_root_right.length > 0) {
+    // Use actual fillet endpoints
+    pt_D = fillet_root_right[fillet_root_right.length - 1];
+    pt_Dp = fillet_root_left[0];
+  } else {
+    pt_D = right_flank[right_flank.length - 1];
+    pt_Dp = left_flank[0];
+  }
+
+  // Dedendum radius based on actual endpoint (not theoretical y_ded)
+  const r_ded = rp_c + pt_D[1];
   const theta_D = pt_D[0] / rp_c;
   const theta_Dp = pt_Dp[0] / rp_c;
 

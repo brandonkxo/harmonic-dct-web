@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useCalculatorStore } from '@/store/calculator-store';
 import { ParameterPanel } from '@/components/calculator/parameter-panel';
 import { StatusMessage } from '@/components/calculator/output-panel';
-import { PlotView, pointsToTrace } from '@/components/calculator/plot-view';
+import { PlotView, pointsToTrace, PlotTrace } from '@/components/calculator/plot-view';
 import { buildFullFlexspline } from '@/lib/equations';
 import { PLOT_COLORS } from '@/lib/constants';
 import type { PointTuple } from '@/types';
@@ -86,7 +86,7 @@ export function TabLongitudinalModification() {
 
   // Build plot traces - show multiple sections
   const traces = React.useMemo(() => {
-    const plotTraces = [];
+    const plotTraces: PlotTrace[] = [];
     const colors = [
       '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4',
       '#e35000', '#8b5cf6', '#ec4899',
@@ -109,7 +109,7 @@ export function TabLongitudinalModification() {
 
   // 3D view traces (simplified top-down view showing section positions)
   const sideViewTraces = React.useMemo(() => {
-    const plotTraces = [];
+    const plotTraces: PlotTrace[] = [];
 
     // Draw simplified side view showing modification curve
     const modCurve: PointTuple[] = [];

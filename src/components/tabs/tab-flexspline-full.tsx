@@ -114,7 +114,7 @@ export function TabFlexsplineFull() {
   }, [result, deformedResult, showDeformed]);
 
   // Output values
-  const outputValues = React.useMemo(() => {
+  const outputValues = React.useMemo((): Record<string, string | number> => {
     if (!result) return {};
     return {
       z_f: result.z_f,

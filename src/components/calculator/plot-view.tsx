@@ -16,7 +16,7 @@ const Plot = dynamic(() => import('react-plotly.js'), {
   ),
 });
 
-interface PlotTrace {
+export interface PlotTrace {
   x: number[];
   y: number[];
   name?: string;
@@ -58,7 +58,7 @@ export function PlotView({
     line: {
       color: trace.color || PLOT_COLORS.AB,
       width: trace.width || 2,
-      dash: trace.dash,
+      dash: trace.dash as Plotly.Dash | undefined,
     },
     marker: {
       color: trace.color || PLOT_COLORS.AB,

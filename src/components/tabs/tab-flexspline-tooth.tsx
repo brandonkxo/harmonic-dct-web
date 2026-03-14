@@ -101,7 +101,7 @@ export function TabFlexsplineTooth() {
   }, [result, params]);
 
   // Output values
-  const outputValues = React.useMemo(() => {
+  const outputValues = React.useMemo((): Record<string, string | number> => {
     if (!result) return {};
     return {
       s: result.s,

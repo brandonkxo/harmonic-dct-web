@@ -20,7 +20,7 @@ export function Header() {
               Harmonic Drive Calculator
             </h1>
             <span className="text-xs text-primary-100 hidden sm:inline">
-              Double-Circular-Arc Common-Tangent Flexspline
+              Double-Circular-Arc Method
             </span>
           </div>
 
