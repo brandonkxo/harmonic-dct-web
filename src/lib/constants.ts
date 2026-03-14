@@ -136,9 +136,10 @@ export const OUTPUT_CATEGORIES = {
     {
       label: 'Gear Geometry',
       values: [
-        { key: 'z_f', label: 'Tooth Count', unit: '', precision: 0 },
         { key: 'rp', label: 'Pitch Radius', unit: 'mm', precision: 3 },
         { key: 'rm', label: 'Neutral Radius', unit: 'mm', precision: 3 },
+        { key: 'rb', label: 'Inner Radius (rb)', unit: 'mm', precision: 3 },
+        { key: 't', label: 'Cup Wall (t)', unit: 'mm', precision: 3 },
       ],
     },
   ],
@@ -146,8 +147,9 @@ export const OUTPUT_CATEGORIES = {
     {
       label: 'Circular Spline',
       values: [
-        { key: 'z_c', label: 'Tooth Count', unit: '', precision: 0 },
         { key: 'rp_c', label: 'Pitch Radius', unit: 'mm', precision: 3 },
+        { key: 'rm_c', label: 'Neutral Radius', unit: 'mm', precision: 3 },
+        { key: 'rb_c', label: 'Inner Radius (rb)', unit: 'mm', precision: 3 },
       ],
     },
   ],
