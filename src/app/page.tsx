@@ -72,7 +72,7 @@ export default function Home() {
             ))}
           </TabsList>
 
-          <div className="flex-1 overflow-auto p-2 h-full">
+          <div className="flex-1 overflow-hidden p-2">
             <TabsContent value="flexspline-full">
               <TabFlexsplineFull />
             </TabsContent>

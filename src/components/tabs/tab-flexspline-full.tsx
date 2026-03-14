@@ -130,9 +130,9 @@ export function TabFlexsplineFull() {
   }, [result, deformedResult, showDeformed]);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-2 h-full">
+    <div className="flex flex-col lg:flex-row gap-2 h-full min-h-0">
       {/* Left Panel */}
-      <div className="w-full lg:w-72 flex-shrink-0 space-y-2 overflow-y-auto">
+      <div className="w-full lg:w-72 lg:h-full flex-shrink-0 space-y-2 overflow-y-auto">
         <div className="panel">
           <div className="panel-header">Parameters</div>
           <div className="panel-body">

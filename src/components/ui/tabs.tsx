@@ -116,5 +116,5 @@ export function TabsContent({ value, children, className }: TabsContentProps) {
 
   if (activeTab !== value) return null;
 
-  return <div className={cn('flex-1 h-full', className)}>{children}</div>;
+  return <div className={cn('flex-1 h-full min-h-0', className)}>{children}</div>;
 }
