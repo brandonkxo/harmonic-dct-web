@@ -170,9 +170,9 @@ export function TabLongitudinalModification() {
   }, [sections, l0, nSections]);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-2 h-full">
+    <div className="flex flex-col lg:flex-row gap-2 h-full min-h-0">
       {/* Left Panel */}
-      <div className="w-full lg:w-72 flex-shrink-0 space-y-2 overflow-y-auto">
+      <div className="w-full lg:w-72 lg:h-full flex-shrink-0 space-y-2 overflow-y-auto">
         <div className="panel">
           <div className="panel-header">Parameters</div>
           <div className="panel-body">
@@ -236,9 +236,9 @@ export function TabLongitudinalModification() {
       </div>
 
       {/* Right Panel - Plots */}
-      <div className="flex-1 flex flex-col gap-2 min-h-[500px] lg:min-h-0">
+      <div className="flex-1 flex flex-col gap-2 min-h-0 pb-2">
         {/* Top: Cross-section view */}
-        <div className="flex-1 min-h-[250px]">
+        <div className="h-[60%] min-h-[200px]">
           <PlotView
             traces={traces}
             title="Cross-Sections at Different Axial Positions"
@@ -249,7 +249,7 @@ export function TabLongitudinalModification() {
         </div>
 
         {/* Bottom: Side view showing modification */}
-        <div className="h-40">
+        <div className="h-[35%] min-h-[120px]">
           <PlotView
             traces={sideViewTraces}
             title="Longitudinal Modification Profile"
