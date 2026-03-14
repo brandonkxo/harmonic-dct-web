@@ -163,8 +163,6 @@ export function TabCircularSpline() {
           </div>
         </div>
 
-        <StatusMessage message={status.message} type={status.type} />
-
         <div className="flex gap-2">
           <Button
             variant="secondary"

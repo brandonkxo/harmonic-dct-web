@@ -150,17 +150,28 @@ export function TabFlexsplineFull() {
           </div>
         </div>
 
-        <StatusMessage message={status.message} type={status.type} />
-
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={showDeformed ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setShowDeformed(!showDeformed)}
-            disabled={!deformedResult}
-          >
-            {showDeformed ? 'Deformed' : 'Undeformed'}
-          </Button>
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-medium transition-colors ${!showDeformed ? 'text-blue-600' : 'text-surface-500'}`}>
+              Undeformed
+            </span>
+            <button
+              onClick={() => setShowDeformed(!showDeformed)}
+              disabled={!deformedResult}
+              className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed ${
+                showDeformed ? 'bg-red-500' : 'bg-blue-500'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ease-in-out ${
+                  showDeformed ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+            <span className={`text-xs font-medium transition-colors ${showDeformed ? 'text-red-600' : 'text-surface-500'}`}>
+              Deformed
+            </span>
+          </div>
           <Button
             variant="secondary"
             size="sm"

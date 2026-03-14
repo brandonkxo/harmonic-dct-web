@@ -225,8 +225,6 @@ export function TabLongitudinalModification() {
           </div>
         </Collapsible>
 
-        <StatusMessage message={status.message} type={status.type} />
-
         <div className="flex gap-2">
           <Button
             variant="secondary"

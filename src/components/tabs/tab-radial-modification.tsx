@@ -396,15 +396,27 @@ export function TabRadialModification() {
         <div className="panel">
           <div className="panel-header">View Controls</div>
           <div className="panel-body space-y-2">
-            <div className="flex gap-2">
-              <Button
-                variant={showDeformed ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setShowDeformed(!showDeformed)}
-                className="flex-1"
-              >
-                {showDeformed ? 'Deformed' : 'Undeformed'}
-              </Button>
+            <div className="flex gap-2 items-center">
+              <div className="flex items-center gap-2 flex-1">
+                <span className={`text-xs font-medium transition-colors ${!showDeformed ? 'text-blue-600' : 'text-surface-500'}`}>
+                  Undef
+                </span>
+                <button
+                  onClick={() => setShowDeformed(!showDeformed)}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+                    showDeformed ? 'bg-red-500' : 'bg-blue-500'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ease-in-out ${
+                      showDeformed ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+                <span className={`text-xs font-medium transition-colors ${showDeformed ? 'text-red-600' : 'text-surface-500'}`}>
+                  Def
+                </span>
+              </div>
               <Button
                 variant={viewMode === 'debug' ? 'primary' : 'secondary'}
                 size="sm"
@@ -455,10 +467,8 @@ export function TabRadialModification() {
         {isComputing && (
           <div className="space-y-2">
             <ProgressBar progress={progress} />
-            <StatusMessage message={`Computing... ${progress}%`} type="computing" />
           </div>
         )}
-        {!isComputing && <StatusMessage message={status.message} type={status.type} />}
 
         <div className="flex gap-2">
           <Button
