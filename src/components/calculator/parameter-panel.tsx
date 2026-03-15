@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { useCalculatorStore } from '@/store/calculator-store';
 import { PARAM_GROUPS, PARAM_LABELS, PARAM_TOOLTIPS, INTEGER_PARAMS } from '@/lib/constants';
 import { Collapsible } from '@/components/ui/collapsible';
@@ -11,6 +12,145 @@ import type { GearParams } from '@/types';
 interface ParameterPanelProps {
   includeFillets?: boolean;
   onUpdate?: () => void;
+}
+
+// Individual parameter input with local editing state
+function ParameterInput({
+  paramKey,
+  value,
+  isInteger,
+  tooltip,
+  onChange,
+  onEnter,
+}: {
+  paramKey: string;
+  value: number;
+  isInteger: boolean;
+  tooltip?: string;
+  onChange: (value: number) => void;
+  onEnter?: () => void;
+}) {
+  const formatValue = (v: number) => isInteger ? String(v) : v.toFixed(3);
+  const [localValue, setLocalValue] = useState(formatValue(value));
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Sync local value when store value changes (but not while editing)
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalValue(formatValue(value));
+    }
+  }, [value, isFocused, isInteger]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+
+    // Update store immediately if valid (for real-time preview)
+    const numValue = parseFloat(newValue);
+    if (!isNaN(numValue)) {
+      onChange(numValue);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    const numValue = parseFloat(localValue);
+    if (!isNaN(numValue)) {
+      onChange(numValue);
+      setLocalValue(formatValue(numValue));
+    } else {
+      // Revert to current store value if invalid
+      setLocalValue(formatValue(value));
+    }
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+      onEnter?.();
+    }
+  };
+
+  return (
+    <Input
+      type="number"
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onFocus={handleFocus}
+      onKeyDown={handleKeyDown}
+      step={isInteger ? 1 : 0.001}
+      className="w-24"
+      tooltip={tooltip}
+    />
+  );
+}
+
+// Fillet input with local editing state
+function FilletInput({
+  value,
+  onChange,
+  onEnter,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  onEnter?: () => void;
+}) {
+  const formatValue = (v: number) => v.toFixed(3);
+  const [localValue, setLocalValue] = useState(formatValue(value));
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalValue(formatValue(value));
+    }
+  }, [value, isFocused]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+
+    const numValue = parseFloat(newValue);
+    if (!isNaN(numValue)) {
+      onChange(numValue);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    const numValue = parseFloat(localValue);
+    if (!isNaN(numValue) && numValue >= 0) {
+      onChange(numValue);
+      setLocalValue(formatValue(numValue));
+    } else {
+      setLocalValue(formatValue(value));
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+      onEnter?.();
+    }
+  };
+
+  return (
+    <Input
+      type="number"
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onFocus={() => setIsFocused(true)}
+      onKeyDown={handleKeyDown}
+      step={0.001}
+      min={0}
+      className="w-24"
+    />
+  );
 }
 
 export function ParameterPanel({
@@ -25,18 +165,7 @@ export function ParameterPanel({
     setFilletAdd,
     setFilletDed,
     resetToDefaults,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
   } = useCalculatorStore();
-
-  const handleParamChange = (key: keyof GearParams, value: string) => {
-    const numValue = parseFloat(value);
-    if (!isNaN(numValue)) {
-      setParam(key, numValue);
-    }
-  };
 
   const handleUpdate = () => {
     onUpdate?.();
@@ -55,19 +184,18 @@ export function ParameterPanel({
           <div className="space-y-1">
             {paramKeys.map((key) => {
               const isInteger = INTEGER_PARAMS.has(key);
-              const displayValue = isInteger ? params[key] : parseFloat(params[key].toFixed(3));
               return (
                 <div key={key} className="flex items-center gap-2">
                   <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide truncate" title={PARAM_TOOLTIPS[key]}>
                     {PARAM_LABELS[key]}
                   </label>
-                  <Input
-                    type="number"
-                    value={displayValue}
-                    onChange={(e) => handleParamChange(key, e.target.value)}
-                    step={isInteger ? 1 : 0.001}
-                    className="w-24"
+                  <ParameterInput
+                    paramKey={key}
+                    value={params[key]}
+                    isInteger={isInteger}
                     tooltip={PARAM_TOOLTIPS[key]}
+                    onChange={(value) => setParam(key, value)}
+                    onEnter={handleUpdate}
                   />
                 </div>
               );
@@ -82,25 +210,11 @@ export function ParameterPanel({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Addendum Fillet</label>
-              <Input
-                type="number"
-                value={parseFloat(filletAdd.toFixed(3))}
-                onChange={(e) => setFilletAdd(parseFloat(e.target.value) || 0)}
-                step={0.001}
-                min={0}
-                className="w-24"
-              />
+              <FilletInput value={filletAdd} onChange={setFilletAdd} onEnter={handleUpdate} />
             </div>
             <div className="flex items-center gap-2">
               <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Dedendum Fillet</label>
-              <Input
-                type="number"
-                value={parseFloat(filletDed.toFixed(3))}
-                onChange={(e) => setFilletDed(parseFloat(e.target.value) || 0)}
-                step={0.001}
-                min={0}
-                className="w-24"
-              />
+              <FilletInput value={filletDed} onChange={setFilletDed} onEnter={handleUpdate} />
             </div>
           </div>
         </Collapsible>
@@ -113,25 +227,6 @@ export function ParameterPanel({
         </Button>
         <Button onClick={handleReset} variant="secondary" size="sm">
           Reset
-        </Button>
-        <div className="flex-1" />
-        <Button
-          onClick={undo}
-          variant="ghost"
-          size="sm"
-          disabled={!canUndo()}
-          title="Undo (Ctrl+Z)"
-        >
-          Undo
-        </Button>
-        <Button
-          onClick={redo}
-          variant="ghost"
-          size="sm"
-          disabled={!canRedo()}
-          title="Redo (Ctrl+Y)"
-        >
-          Redo
         </Button>
       </div>
     </div>

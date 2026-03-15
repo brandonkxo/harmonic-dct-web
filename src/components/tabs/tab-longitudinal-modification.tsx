@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { useCalculatorStore } from '@/store/calculator-store';
 import { ParameterPanel } from '@/components/calculator/parameter-panel';
 import { StatusMessage } from '@/components/calculator/output-panel';
@@ -12,6 +13,84 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Collapsible } from '@/components/ui/collapsible';
 import { ExportDialog } from '@/components/calculator/export-dialog';
+
+// Numeric input with local editing state
+function NumericInput({
+  value,
+  onChange,
+  onEnter,
+  isInteger = false,
+  min,
+  max,
+  defaultValue,
+  className,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  onEnter?: () => void;
+  isInteger?: boolean;
+  min?: number;
+  max?: number;
+  defaultValue: number;
+  className?: string;
+}) {
+  const formatValue = (v: number) => isInteger ? String(v) : v.toFixed(3);
+  const [localValue, setLocalValue] = useState(formatValue(value));
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalValue(formatValue(value));
+    }
+  }, [value, isFocused, isInteger]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+
+    const numValue = isInteger ? parseInt(newValue) : parseFloat(newValue);
+    if (!isNaN(numValue)) {
+      onChange(numValue);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    const numValue = isInteger ? parseInt(localValue) : parseFloat(localValue);
+    if (!isNaN(numValue)) {
+      let clampedValue = numValue;
+      if (min !== undefined) clampedValue = Math.max(min, clampedValue);
+      if (max !== undefined) clampedValue = Math.min(max, clampedValue);
+      onChange(clampedValue);
+      setLocalValue(formatValue(clampedValue));
+    } else {
+      onChange(defaultValue);
+      setLocalValue(formatValue(defaultValue));
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+      onEnter?.();
+    }
+  };
+
+  return (
+    <Input
+      type="number"
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onFocus={() => setIsFocused(true)}
+      onKeyDown={handleKeyDown}
+      step={isInteger ? 1 : 0.001}
+      min={min}
+      max={max}
+      className={className}
+    />
+  );
+}
 
 export function TabLongitudinalModification() {
   const params = useCalculatorStore((state) => state.params);
@@ -187,36 +266,37 @@ export function TabLongitudinalModification() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Total Length l0</label>
-              <Input
-                type="number"
-                value={parseFloat(l0.toFixed(3))}
-                onChange={(e) => setL0(parseFloat(e.target.value) || 10)}
-                step={0.001}
+              <NumericInput
+                value={l0}
+                onChange={setL0}
+                onEnter={handleUpdate}
                 min={1}
+                defaultValue={10}
                 className="w-24"
               />
             </div>
             <div className="flex items-center gap-2">
               <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Engagement li</label>
-              <Input
-                type="number"
-                value={parseFloat(li.toFixed(3))}
-                onChange={(e) => setLi(parseFloat(e.target.value) || 5)}
-                step={0.001}
+              <NumericInput
+                value={li}
+                onChange={setLi}
+                onEnter={handleUpdate}
                 min={0}
                 max={l0}
+                defaultValue={5}
                 className="w-24"
               />
             </div>
             <div className="flex items-center gap-2">
               <label className="flex-1 text-xs text-surface-600 uppercase tracking-wide">Sections</label>
-              <Input
-                type="number"
+              <NumericInput
                 value={nSections}
-                onChange={(e) => setNSections(parseInt(e.target.value) || 5)}
-                step={1}
+                onChange={setNSections}
+                onEnter={handleUpdate}
+                isInteger
                 min={2}
                 max={20}
+                defaultValue={5}
                 className="w-24"
               />
             </div>
