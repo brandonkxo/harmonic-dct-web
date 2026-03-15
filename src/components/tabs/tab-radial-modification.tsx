@@ -23,6 +23,7 @@ import {
 import { PLOT_COLORS } from '@/lib/constants';
 import type { PointTuple, GearParams, ProfileResult } from '@/types';
 import { Button } from '@/components/ui/button';
+import { SegmentedToggle } from '@/components/ui/toggle';
 import { ExportDialog } from '@/components/calculator/export-dialog';
 
 interface DmaxResult {
@@ -380,8 +381,7 @@ export function TabRadialModification() {
   }, [checkUnsavedChanges, handleUpdate]);
 
   // Handle deformed toggle - rebuild modified geometry if we have it
-  const handleToggleDeformed = React.useCallback(() => {
-    const newShowDeformed = !showDeformed;
+  const handleToggleDeformed = React.useCallback((newShowDeformed: boolean) => {
     setShowDeformed(newShowDeformed);
 
     // If we have modified geometry with applied dmax, rebuild with new deformation state
@@ -450,26 +450,12 @@ export function TabRadialModification() {
           <div className="panel-header">View Controls</div>
           <div className="panel-body">
             <div className="flex gap-2 items-center">
-              <div className="flex items-center gap-2 flex-1">
-                <span className={`text-xs font-medium transition-colors ${!showDeformed ? 'text-green-700' : 'text-surface-500'}`}>
-                  Undeformed
-                </span>
-                <button
-                  onClick={handleToggleDeformed}
-                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
-                    showDeformed ? 'bg-red-500' : 'bg-green-600'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ease-in-out ${
-                      showDeformed ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-                <span className={`text-xs font-medium transition-colors ${showDeformed ? 'text-red-600' : 'text-surface-500'}`}>
-                  Deformed
-                </span>
-              </div>
+              <SegmentedToggle
+                value={showDeformed}
+                onChange={handleToggleDeformed}
+                leftLabel="Undeformed"
+                rightLabel="Deformed"
+              />
               <Button
                 variant="secondary"
                 size="sm"
