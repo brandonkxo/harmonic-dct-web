@@ -6,7 +6,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { GearParams, TabId } from '@/types';
+import type { GearParams, TabId, PointTuple } from '@/types';
 import { DEFAULTS, DEFAULT_SMOOTH, DEFAULT_FILLET_ADD, DEFAULT_FILLET_DED } from '@/lib/constants';
 
 // Maximum history size for undo/redo
@@ -17,6 +17,14 @@ interface HistoryState {
   smooth: number;
   filletAdd: number;
   filletDed: number;
+}
+
+// Radial modification state (persisted separately to avoid bloating history)
+interface RadialModState {
+  hasModifiedGeometry: boolean;
+  modifiedFsPoints: PointTuple[];
+  appliedDmax: { x: number; y: number } | null;
+  modifiedParams: GearParams | null;  // params when modification was made
 }
 
 interface CalculatorState {
@@ -37,6 +45,9 @@ interface CalculatorState {
   // Undo/redo history
   history: HistoryState[];
   historyIndex: number;
+
+  // Radial modification state (persisted)
+  radialMod: RadialModState;
 
   // Actions
   setParam: <K extends keyof GearParams>(key: K, value: GearParams[K]) => void;
@@ -61,6 +72,10 @@ interface CalculatorState {
   canRedo: () => boolean;
   pushHistory: () => void;
 
+  // Radial modification actions
+  setRadialMod: (mod: Partial<RadialModState>) => void;
+  clearRadialMod: () => void;
+
   // Config management
   getConfig: () => object;
   loadConfig: (config: object) => void;
@@ -80,6 +95,12 @@ export const useCalculatorStore = create<CalculatorState>()(
       lastError: null,
       history: [],
       historyIndex: -1,
+      radialMod: {
+        hasModifiedGeometry: false,
+        modifiedFsPoints: [],
+        appliedDmax: null,
+        modifiedParams: null,
+      },
 
       // Set a single parameter
       setParam: (key, value) => {
@@ -201,6 +222,21 @@ export const useCalculatorStore = create<CalculatorState>()(
       // Check if redo is available
       canRedo: () => get().historyIndex < get().history.length - 1,
 
+      // Set radial modification state
+      setRadialMod: (mod) => set((state) => ({
+        radialMod: { ...state.radialMod, ...mod },
+      })),
+
+      // Clear radial modification state
+      clearRadialMod: () => set({
+        radialMod: {
+          hasModifiedGeometry: false,
+          modifiedFsPoints: [],
+          appliedDmax: null,
+          modifiedParams: null,
+        },
+      }),
+
       // Get current config as JSON-serializable object
       getConfig: () => {
         const state = get();
@@ -231,6 +267,7 @@ export const useCalculatorStore = create<CalculatorState>()(
         smooth: state.smooth,
         filletAdd: state.filletAdd,
         filletDed: state.filletDed,
+        radialMod: state.radialMod,
       }),
     }
   )
@@ -240,3 +277,4 @@ export const useCalculatorStore = create<CalculatorState>()(
 export const useParams = () => useCalculatorStore((state) => state.params);
 export const useActiveTab = () => useCalculatorStore((state) => state.activeTab);
 export const useIsComputing = () => useCalculatorStore((state) => state.isComputing);
+export const useRadialMod = () => useCalculatorStore((state) => state.radialMod);

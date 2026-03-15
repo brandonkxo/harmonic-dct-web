@@ -39,15 +39,18 @@ export function TabRadialModification() {
   const filletDed = useCalculatorStore((state) => state.filletDed);
   const setError = useCalculatorStore((state) => state.setError);
 
-  // View state
+  // Radial modification state from store (persisted across tab switches)
+  const radialMod = useCalculatorStore((state) => state.radialMod);
+  const setRadialMod = useCalculatorStore((state) => state.setRadialMod);
+  const clearRadialMod = useCalculatorStore((state) => state.clearRadialMod);
+  const { hasModifiedGeometry, modifiedFsPoints, appliedDmax, modifiedParams } = radialMod;
+
+  // View state (local - no need to persist)
   const [showDeformed, setShowDeformed] = React.useState(false);
   const [showOverlapConfirm, setShowOverlapConfirm] = React.useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = React.useState(false);
   const [pendingAction, setPendingAction] = React.useState<(() => void) | null>(null);
   const [isApplyingFix, setIsApplyingFix] = React.useState(false);
-  const [hasModifiedGeometry, setHasModifiedGeometry] = React.useState(false);
-  const [modifiedFsPoints, setModifiedFsPoints] = React.useState<PointTuple[]>([]);
-  const [modifiedParams, setModifiedParams] = React.useState<GearParams | null>(null);
   const [isComputing, setIsComputing] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
 
@@ -62,10 +65,9 @@ export function TabRadialModification() {
   const [debugCsTooth, setDebugCsTooth] = React.useState<PointTuple[]>([]);
   const [debugFsAddendum, setDebugFsAddendum] = React.useState<PointTuple[]>([]);
 
-  // Dmax state
+  // Dmax state (local - temporary calculation results)
   const [dmaxResult, setDmaxResult] = React.useState<DmaxResult | null>(null);
   const [trimmedTooth, setTrimmedTooth] = React.useState<PointTuple[]>([]);
-  const [appliedDmax, setAppliedDmax] = React.useState<{ x: number; y: number } | null>(null);
 
   // Export
   const [showExport, setShowExport] = React.useState(false);
@@ -238,7 +240,6 @@ export function TabRadialModification() {
     setStatus({ message: 'Building gear profiles...', type: 'computing' });
     setDmaxResult(null);
     setTrimmedTooth([]);
-    setAppliedDmax(null);
 
     await new Promise(resolve => setTimeout(resolve, 50));
 
@@ -332,10 +333,12 @@ export function TabRadialModification() {
         : buildDmaxFullFlexspline(params, dmaxX, dmaxY, 39, filletAdd, filletDed, smooth);
 
       if (!modifiedFs.error && modifiedFs.chain_xy.length > 0) {
-        setModifiedFsPoints(modifiedFs.chain_xy);
-        setModifiedParams(params); // Store original params for toggle rebuild
-        setAppliedDmax({ x: dmaxX, y: dmaxY }); // Store dmax for toggle rebuild
-        setHasModifiedGeometry(true);
+        setRadialMod({
+          modifiedFsPoints: modifiedFs.chain_xy,
+          modifiedParams: params,
+          appliedDmax: { x: dmaxX, y: dmaxY },
+          hasModifiedGeometry: true,
+        });
         setStatus({
           message: `Overlap fix applied: dmax_x=${dmaxX.toFixed(4)}mm, dmax_y=${dmaxY.toFixed(4)}mm`,
           type: 'success',
@@ -348,7 +351,7 @@ export function TabRadialModification() {
     }
 
     setIsApplyingFix(false);
-  }, [calculateDmax, params, showDeformed, filletAdd, filletDed, smooth]);
+  }, [calculateDmax, params, showDeformed, filletAdd, filletDed, smooth, setRadialMod]);
 
   // Check for unsaved changes before destructive actions
   const checkUnsavedChanges = React.useCallback((action: () => void) => {
@@ -362,17 +365,14 @@ export function TabRadialModification() {
 
   // Confirm discard changes
   const handleDiscardChanges = React.useCallback(() => {
-    setHasModifiedGeometry(false);
-    setModifiedFsPoints([]);
-    setModifiedParams(null);
-    setAppliedDmax(null);
+    clearRadialMod();
     setDmaxResult(null);
     setShowUnsavedWarning(false);
     if (pendingAction) {
       pendingAction();
       setPendingAction(null);
     }
-  }, [pendingAction]);
+  }, [pendingAction, clearRadialMod]);
 
   // Wrapped update handler that checks for unsaved changes
   const handleUpdateWithWarning = React.useCallback(() => {
@@ -391,10 +391,10 @@ export function TabRadialModification() {
         : buildDmaxFullFlexspline(modifiedParams, appliedDmax.x, appliedDmax.y, 39, filletAdd, filletDed, smooth);
 
       if (!modifiedFs.error && modifiedFs.chain_xy.length > 0) {
-        setModifiedFsPoints(modifiedFs.chain_xy);
+        setRadialMod({ modifiedFsPoints: modifiedFs.chain_xy });
       }
     }
-  }, [showDeformed, modifiedParams, appliedDmax, filletAdd, filletDed, smooth]);
+  }, [showDeformed, modifiedParams, appliedDmax, filletAdd, filletDed, smooth, setRadialMod]);
 
   // Build plot traces (always overlay view)
   const traces = React.useMemo(() => {
@@ -474,10 +474,14 @@ export function TabRadialModification() {
                 variant="secondary"
                 size="sm"
                 onClick={() => setShowOverlapConfirm(true)}
-                className="flex-1"
+                className={`flex-1 transition-all ${
+                  hasModifiedGeometry
+                    ? 'bg-green-500 hover:bg-green-600 text-white shadow-[0_0_12px_rgba(34,197,94,0.5)]'
+                    : ''
+                }`}
                 disabled={debugFsTooth.length === 0 || debugCsTooth.length === 0}
               >
-                Overlap Fix
+                {hasModifiedGeometry ? 'Overlap Fix Active' : 'Overlap Fix'}
               </Button>
             </div>
           </div>
@@ -496,7 +500,7 @@ export function TabRadialModification() {
             onClick={() => setShowExport(true)}
             disabled={exportPoints.length === 0}
           >
-            Export FS
+            {hasModifiedGeometry ? 'Export Overlap Modified FS' : 'Export FS'}
           </Button>
         </div>
       </div>
