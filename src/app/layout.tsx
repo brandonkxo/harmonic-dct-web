@@ -5,9 +5,6 @@ export const metadata: Metadata = {
   title: 'Harmonic Drive DCT Tooth Calculator',
   description: 'Double-Circular-Arc Common-Tangent Flexspline Tooth Profile Calculator for Harmonic Drives',
   keywords: ['harmonic drive', 'flexspline', 'gear calculator', 'tooth profile', 'DCT'],
-  icons: {
-    icon: '/favicon.ico',
-  },
   openGraph: {
     title: 'Harmonic Drive DCT Tooth Calculator',
     description: 'Double-Circular-Arc Common-Tangent Flexspline Tooth Profile Calculator for Harmonic Drives',
