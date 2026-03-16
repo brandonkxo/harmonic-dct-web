@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useCalculatorStore } from '@/store/calculator-store';
 import { ParameterPanel } from '@/components/calculator/parameter-panel';
 import { StatusMessage, ProgressBar } from '@/components/calculator/output-panel';
-import { PlotView, pointsToTrace } from '@/components/calculator/plot-view';
+import { PlotView, pointsToTrace, createFilledCircle } from '@/components/calculator/plot-view';
 import {
   buildDeformedFlexspline,
   buildFullFlexspline,
@@ -60,6 +60,8 @@ export function TabRadialModification() {
   const [csPoints, setCsPoints] = React.useState<PointTuple[]>([]);
   const [smoothedFlank, setSmoothedFlank] = React.useState<PointTuple[]>([]);
   const [rpC, setRpC] = React.useState(0);
+  const [fsRm, setFsRm] = React.useState(0);
+  const [fsT, setFsT] = React.useState(0);
 
   // Debug mode data
   const [debugFsTooth, setDebugFsTooth] = React.useState<PointTuple[]>([]);
@@ -257,6 +259,8 @@ export function TabRadialModification() {
         return;
       }
       setFsPoints(fs.chain_xy);
+      setFsRm(fs.rm);
+      setFsT(fs.t);
 
       // Compute conjugate profile
       setProgress(30);
@@ -400,29 +404,131 @@ export function TabRadialModification() {
   const traces = React.useMemo(() => {
     const plotTraces = [];
 
+    // Get colors based on modified state
+    const fsColor = hasModifiedGeometry ? PLOT_COLORS.modified : PLOT_COLORS.deformed;
+    const csColor = PLOT_COLORS.conjugate;
+
+    // Calculate radii for ID/OD circles
+    const fsRb = fsRm - fsT / 2; // Flexspline inner radius (ID)
+    const csOdRadius = rpC + 4; // Circular spline outer diameter (pitch + 4mm)
+
+    // Helper to convert hex to rgba
+    const hexToRgba = (hex: string, alpha: number) => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    // Helper to generate circle points
+    const generateCircle = (radius: number, numPoints: number = 361): PointTuple[] => {
+      const points: PointTuple[] = [];
+      for (let i = 0; i <= numPoints; i++) {
+        const theta = (i * Math.PI * 2) / numPoints;
+        points.push([radius * Math.sin(theta), radius * Math.cos(theta)]);
+      }
+      return points;
+    };
+
     // Show modified flexspline if available, otherwise show original
     const displayFsPoints = hasModifiedGeometry && modifiedFsPoints.length > 0
       ? modifiedFsPoints
       : fsPoints;
 
+    // Create annular fill for Circular Spline (between OD and teeth)
+    // Trace OD circle, then trace CS teeth in reverse to create ring
+    if (csPoints.length > 0 && rpC > 0) {
+      const odCircle = generateCircle(csOdRadius);
+      const csReversed = [...csPoints].reverse();
+
+      // Combine: OD circle -> null break -> CS teeth reversed -> back to start
+      // The null creates a gap so no connecting line is drawn
+      const csAnnularX: (number | null)[] = [
+        ...odCircle.map(p => p[0]),
+        null,
+        ...csReversed.map(p => p[0])
+      ];
+      const csAnnularY: (number | null)[] = [
+        ...odCircle.map(p => p[1]),
+        null,
+        ...csReversed.map(p => p[1])
+      ];
+
+      plotTraces.push({
+        x: csAnnularX,
+        y: csAnnularY,
+        name: 'CS Body',
+        color: 'transparent',
+        fill: 'toself' as const,
+        fillcolor: hexToRgba(csColor, 0.18),
+        mode: 'lines' as const,
+        width: 0,
+        showlegend: false,
+      });
+    }
+
+    // Create annular fill for Flexspline (between teeth and ID)
+    // Trace FS teeth, then trace ID circle in reverse to create ring
+    if (displayFsPoints.length > 0 && fsRb > 0) {
+      const idCircle = generateCircle(fsRb);
+      const idReversed = [...idCircle].reverse();
+
+      // Combine: FS teeth -> null break -> ID circle reversed -> back to start
+      const fsAnnularX: (number | null)[] = [
+        ...displayFsPoints.map(p => p[0]),
+        null,
+        ...idReversed.map(p => p[0])
+      ];
+      const fsAnnularY: (number | null)[] = [
+        ...displayFsPoints.map(p => p[1]),
+        null,
+        ...idReversed.map(p => p[1])
+      ];
+
+      plotTraces.push({
+        x: fsAnnularX,
+        y: fsAnnularY,
+        name: 'FS Body',
+        color: 'transparent',
+        fill: 'toself' as const,
+        fillcolor: hexToRgba(fsColor, 0.15),
+        mode: 'lines' as const,
+        width: 0,
+        showlegend: false,
+      });
+    }
+
+    // Add the gear teeth outlines on top
     if (displayFsPoints.length > 0) {
       plotTraces.push(
         pointsToTrace(
           displayFsPoints,
           hasModifiedGeometry ? 'Modified Flexspline' : 'Flexspline',
-          hasModifiedGeometry ? PLOT_COLORS.modified : PLOT_COLORS.deformed,
-          { width: 1 }
+          fsColor,
+          { width: 1.5 }
         )
       );
     }
     if (csPoints.length > 0) {
       plotTraces.push(
-        pointsToTrace(csPoints, 'Circular Spline', PLOT_COLORS.conjugate, { width: 1 })
+        pointsToTrace(csPoints, 'Circular Spline', csColor, { width: 1.5 })
+      );
+    }
+
+    // Add ID/OD boundary lines
+    if (fsRb > 0) {
+      plotTraces.push(
+        createFilledCircle(fsRb, 'FS ID', fsColor, 'transparent', { showlegend: false, width: 1 })
+      );
+    }
+    if (rpC > 0) {
+      plotTraces.push(
+        createFilledCircle(csOdRadius, 'CS OD', csColor, 'transparent', { showlegend: false, width: 1 })
       );
     }
 
     return plotTraces;
-  }, [fsPoints, csPoints, hasModifiedGeometry, modifiedFsPoints]);
+  }, [fsPoints, csPoints, hasModifiedGeometry, modifiedFsPoints, fsRm, fsT, rpC]);
 
   // Export points
   const exportPoints = React.useMemo(() => {

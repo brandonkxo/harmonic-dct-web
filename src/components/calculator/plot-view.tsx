@@ -17,14 +17,16 @@ const Plot = dynamic(() => import('react-plotly.js'), {
 });
 
 export interface PlotTrace {
-  x: number[];
-  y: number[];
+  x: (number | null)[];
+  y: (number | null)[];
   name?: string;
   color?: string;
   mode?: 'lines' | 'markers' | 'lines+markers';
   width?: number;
   dash?: string;
   showlegend?: boolean;
+  fill?: 'none' | 'toself' | 'tonexty' | 'tozeroy';
+  fillcolor?: string;
 }
 
 interface PlotViewProps {
@@ -57,7 +59,7 @@ export function PlotView({
     mode: trace.mode || 'lines',
     line: {
       color: trace.color || PLOT_COLORS.AB,
-      width: trace.width || 2,
+      width: trace.width !== undefined ? trace.width : 2,
       dash: trace.dash as Plotly.Dash | undefined,
     },
     marker: {
@@ -65,6 +67,8 @@ export function PlotView({
       size: 5,
     },
     showlegend: trace.showlegend !== false,
+    fill: trace.fill || 'none',
+    fillcolor: trace.fillcolor,
   }));
 
   const layout: Partial<Plotly.Layout> = {
@@ -177,5 +181,36 @@ export function createMarker(
     name,
     color,
     mode: 'markers',
+  };
+}
+
+// Create a filled circle trace
+export function createFilledCircle(
+  radius: number,
+  name: string,
+  lineColor: string,
+  fillColor: string,
+  options: Partial<PlotTrace> = {}
+): PlotTrace {
+  const points = 361;
+  const x: number[] = [];
+  const y: number[] = [];
+
+  for (let i = 0; i <= points; i++) {
+    const theta = (i * Math.PI * 2) / points;
+    x.push(radius * Math.sin(theta));
+    y.push(radius * Math.cos(theta));
+  }
+
+  return {
+    x,
+    y,
+    name,
+    color: lineColor,
+    fill: 'toself',
+    fillcolor: fillColor,
+    mode: 'lines',
+    width: 1,
+    ...options,
   };
 }

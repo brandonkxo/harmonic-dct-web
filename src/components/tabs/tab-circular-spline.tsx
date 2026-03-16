@@ -262,7 +262,7 @@ export function TabCircularSpline() {
       <div className="flex-1 min-h-[300px] lg:min-h-0">
         <PlotView
           traces={traces}
-          title="Circular Spline (Internal Gear)"
+          title="Circular Spline"
           xAxisLabel="X (mm)"
           yAxisLabel="Y (mm)"
           className="h-full"
