@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { TipsPopup } from '@/components/ui/tips-popup';
 import { useCalculatorStore } from '@/store/calculator-store';
 import {
   TabFlexsplineTooth,
@@ -90,6 +91,7 @@ export default function Home() {
       </main>
 
       <Footer />
+      <TipsPopup />
     </div>
   );
 }
