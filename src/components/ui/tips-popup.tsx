@@ -5,12 +5,12 @@ import Image from 'next/image';
 import { Button } from './button';
 
 const TIPS = [
-  'Keep the modulus bigger than your deformation to avoid excess interference.',
+  'Keep the modulus bigger than your max deformation value to avoid excess interference.',
   'Use the Radial Modification tab to fine-tune tooth clearance.',
   'Export your configuration as JSON to save your work.',
-  'The conjugate solver finds optimal circular spline profiles automatically.',
-  'Higher tooth counts generally allow for smoother operation.',
-  'Check the interference plot to validate your design.',
+  'The conjugate solver finds optimal circular spline profiles automatically, using the double conjugate mapping method.',
+  'Click the reference image button to learn what each tab does.',
+  'Try the overlap fix button, which removes small amounts of interference!',
 ];
 
 export function TipsPopup() {

@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useCalculatorStore } from '@/store/calculator-store';
 import { ParameterPanel } from '@/components/calculator/parameter-panel';
 import { OutputPanel, StatusMessage } from '@/components/calculator/output-panel';
-import { PlotView, pointsToTrace, createReferenceLine, createMarker } from '@/components/calculator/plot-view';
+import { PlotView, pointsToTrace, createReferenceLine, createMarker, createFilledCircle } from '@/components/calculator/plot-view';
 import { buildFullFlexspline, buildDeformedFlexspline, computeProfile } from '@/lib/equations';
 import { PLOT_COLORS } from '@/lib/constants';
 import type { FullGearResult, PointTuple } from '@/types';
@@ -67,46 +67,90 @@ export function TabFlexsplineFull() {
     const displayResult = showDeformed ? deformedResult : result;
 
     if (displayResult && displayResult.chain_xy.length > 0) {
+      const { rp, rm, ds, ha, hf, t } = displayResult;
+      const fsColor = showDeformed ? PLOT_COLORS.deformed : PLOT_COLORS.AB;
+      const rb = rm - t / 2; // Inner radius (ID)
+
+      // Helper to convert hex to rgba
+      const hexToRgba = (hex: string, alpha: number) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      };
+
+      // Helper to generate circle points
+      const generateCircle = (radius: number, numPoints: number = 361): PointTuple[] => {
+        const points: PointTuple[] = [];
+        for (let i = 0; i <= numPoints; i++) {
+          const theta = (i * Math.PI * 2) / numPoints;
+          points.push([radius * Math.sin(theta), radius * Math.cos(theta)]);
+        }
+        return points;
+      };
+
+      // Create annular fill for Flexspline (between teeth and ID)
+      if (rb > 0) {
+        const idCircle = generateCircle(rb);
+        const idReversed = [...idCircle].reverse();
+
+        const fsAnnularX: (number | null)[] = [
+          ...displayResult.chain_xy.map(p => p[0]),
+          null,
+          ...idReversed.map(p => p[0])
+        ];
+        const fsAnnularY: (number | null)[] = [
+          ...displayResult.chain_xy.map(p => p[1]),
+          null,
+          ...idReversed.map(p => p[1])
+        ];
+
+        plotTraces.push({
+          x: fsAnnularX,
+          y: fsAnnularY,
+          name: 'FS Body',
+          color: 'transparent',
+          fill: 'toself' as const,
+          fillcolor: hexToRgba(fsColor, 0.15),
+          mode: 'lines' as const,
+          width: 0,
+          showlegend: false,
+        });
+      }
+
+      // Flexspline teeth outline
       plotTraces.push(
         pointsToTrace(
           displayResult.chain_xy,
           showDeformed ? 'Deformed Flexspline' : 'Flexspline',
-          showDeformed ? PLOT_COLORS.deformed : PLOT_COLORS.AB,
-          { width: 1 }
+          fsColor,
+          { width: 1.5 }
         )
       );
 
-      // Add reference circles
-      const { rp, rm, ds, ha, hf } = displayResult;
+      // ID boundary line
+      if (rb > 0) {
+        plotTraces.push(
+          createFilledCircle(rb, 'Inner Diameter', fsColor, 'transparent', { showlegend: false, width: 1 })
+        );
+      }
 
       // Pitch circle
-      const pitchCircle: PointTuple[] = [];
-      for (let i = 0; i <= 360; i++) {
-        const theta = (i * Math.PI) / 180;
-        pitchCircle.push([rp * Math.sin(theta), rp * Math.cos(theta)]);
-      }
+      const pitchCircle: PointTuple[] = generateCircle(rp);
       plotTraces.push(
         pointsToTrace(pitchCircle, 'Pitch Circle', PLOT_COLORS.pitch, { width: 1, dash: 'dash' })
       );
 
       // Addendum circle
       const r_add = rp + ha;
-      const addCircle: PointTuple[] = [];
-      for (let i = 0; i <= 360; i++) {
-        const theta = (i * Math.PI) / 180;
-        addCircle.push([r_add * Math.sin(theta), r_add * Math.cos(theta)]);
-      }
+      const addCircle: PointTuple[] = generateCircle(r_add);
       plotTraces.push(
         pointsToTrace(addCircle, 'Addendum Circle', PLOT_COLORS.addendum, { width: 1, dash: 'dot' })
       );
 
       // Dedendum circle
       const r_ded = rm + ds;
-      const dedCircle: PointTuple[] = [];
-      for (let i = 0; i <= 360; i++) {
-        const theta = (i * Math.PI) / 180;
-        dedCircle.push([r_ded * Math.sin(theta), r_ded * Math.cos(theta)]);
-      }
+      const dedCircle: PointTuple[] = generateCircle(r_ded);
       plotTraces.push(
         pointsToTrace(dedCircle, 'Dedendum Circle', PLOT_COLORS.dedendum, { width: 1, dash: 'dot' })
       );

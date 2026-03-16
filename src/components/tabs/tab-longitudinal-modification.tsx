@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useCalculatorStore } from '@/store/calculator-store';
 import { ParameterPanel } from '@/components/calculator/parameter-panel';
 import { StatusMessage } from '@/components/calculator/output-panel';
-import { PlotView, pointsToTrace, PlotTrace } from '@/components/calculator/plot-view';
+import { PlotView, pointsToTrace, PlotTrace, createFilledCircle } from '@/components/calculator/plot-view';
 import { buildFullFlexspline } from '@/lib/equations';
 import { PLOT_COLORS } from '@/lib/constants';
 import type { PointTuple } from '@/types';
@@ -104,7 +104,7 @@ export function TabLongitudinalModification() {
   const [li, setLi] = React.useState(5.0);   // Engagement length (mm)
   const [nSections, setNSections] = React.useState(5);
 
-  const [sections, setSections] = React.useState<{ z: number; points: PointTuple[] }[]>([]);
+  const [sections, setSections] = React.useState<{ z: number; points: PointTuple[]; rm: number; t: number }[]>([]);
   const [showExport, setShowExport] = React.useState(false);
   const [status, setStatus] = React.useState<{ message: string; type: 'info' | 'success' | 'error' }>({
     message: 'Configure longitudinal modification parameters and click Update.',
@@ -113,7 +113,7 @@ export function TabLongitudinalModification() {
 
   const handleUpdate = React.useCallback(() => {
     // Build gear at multiple axial sections with varying modification
-    const newSections: { z: number; points: PointTuple[] }[] = [];
+    const newSections: { z: number; points: PointTuple[]; rm: number; t: number }[] = [];
 
     for (let i = 0; i < nSections; i++) {
       const z = (i / (nSections - 1)) * l0;
@@ -140,7 +140,7 @@ export function TabLongitudinalModification() {
       const result = buildFullFlexspline(modParams, 39, filletAdd, filletDed, smooth);
 
       if (!result.error && result.chain_xy.length > 0) {
-        newSections.push({ z, points: result.chain_xy });
+        newSections.push({ z, points: result.chain_xy, rm: result.rm, t: result.t });
       }
     }
 
@@ -171,16 +171,78 @@ export function TabLongitudinalModification() {
       '#e35000', '#8b5cf6', '#ec4899',
     ];
 
+    // Helper to convert hex to rgba
+    const hexToRgba = (hex: string, alpha: number) => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    // Helper to generate circle points
+    const generateCircle = (radius: number, numPoints: number = 361): PointTuple[] => {
+      const points: PointTuple[] = [];
+      for (let i = 0; i <= numPoints; i++) {
+        const theta = (i * Math.PI * 2) / numPoints;
+        points.push([radius * Math.sin(theta), radius * Math.cos(theta)]);
+      }
+      return points;
+    };
+
+    // Add fills first (behind outlines)
     sections.forEach((section, i) => {
       const color = colors[i % colors.length];
+      const rb = section.rm - section.t / 2; // Inner radius (ID)
+
+      if (rb > 0) {
+        const idCircle = generateCircle(rb);
+        const idReversed = [...idCircle].reverse();
+
+        const fsAnnularX: (number | null)[] = [
+          ...section.points.map(p => p[0]),
+          null,
+          ...idReversed.map(p => p[0])
+        ];
+        const fsAnnularY: (number | null)[] = [
+          ...section.points.map(p => p[1]),
+          null,
+          ...idReversed.map(p => p[1])
+        ];
+
+        plotTraces.push({
+          x: fsAnnularX,
+          y: fsAnnularY,
+          name: '',
+          color: 'transparent',
+          fill: 'toself' as const,
+          fillcolor: hexToRgba(color, 0.12),
+          mode: 'lines' as const,
+          width: 0,
+          showlegend: false,
+        });
+      }
+    });
+
+    // Add outlines on top
+    sections.forEach((section, i) => {
+      const color = colors[i % colors.length];
+      const rb = section.rm - section.t / 2;
+
       plotTraces.push(
         pointsToTrace(
           section.points,
           `z = ${section.z.toFixed(1)}`,
           color,
-          { width: 1 }
+          { width: 1.5 }
         )
       );
+
+      // Add ID circle
+      if (rb > 0) {
+        plotTraces.push(
+          createFilledCircle(rb, '', color, 'transparent', { showlegend: false, width: 0.5 })
+        );
+      }
     });
 
     return plotTraces;
