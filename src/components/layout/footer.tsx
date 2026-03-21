@@ -127,6 +127,7 @@ export function Footer() {
                 style={{ width: '100%', height: '100%' }}
                 shadow-intensity="1"
                 tone-mapping="neutral"
+                exposure="0.5"
               />
 
               {/* Navigation arrows */}
