@@ -31,6 +31,10 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
+        <script
+          type="module"
+          src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"
+        />
       </head>
       <body className="h-full bg-surface-300 text-surface-900 antialiased text-sm">
         {children}
