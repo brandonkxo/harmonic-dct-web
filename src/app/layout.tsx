@@ -13,6 +13,12 @@ export const metadata: Metadata = {
   description: 'An open source design software for building high torque compact gearboxes',
   keywords: ['harmonic drive', 'flexspline', 'gear calculator', 'tooth profile', 'DCT', 'harmonic gearbox', 'strain wave gear', 'gear design', 'mechanical engineering', 'open source', 'high torque', 'compact gearbox'],
   authors: [{ name: 'Harmonic Gearbox Calculator' }],
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: '/favicon.ico',
+  },
   metadataBase: new URL('https://harmonicgearboxcalculator.com'),
   alternates: {
     canonical: '/',
