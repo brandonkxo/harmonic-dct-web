@@ -15,9 +15,10 @@ export const metadata: Metadata = {
   authors: [{ name: 'Harmonic Gearbox Calculator' }],
   icons: {
     icon: [
+      { url: '/app_icon_png.png', type: 'image/png' },
       { url: '/favicon.ico', sizes: 'any' },
     ],
-    apple: '/favicon.ico',
+    apple: '/app_icon_png.png',
   },
   metadataBase: new URL('https://harmonicgearboxcalculator.com'),
   alternates: {
